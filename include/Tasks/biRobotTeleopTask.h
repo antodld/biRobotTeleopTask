@@ -46,13 +46,15 @@ public:
   
     }
 
-    void unactiveJoints(std::vector<std::string> robot_joints,const int rIndex)
+    void unactiveJoints(const std::vector<std::string> & robot_joints,const int rIndex)
     {
-        if(r1Index_ == rIndex)
+
+        if(robotIndexes_[0] == rIndex)
         {
+            std::cout << "here" << std::endl;
             unactiveJointsName_[0] = robot_joints;
         }
-        if(r2Index_ == rIndex)
+        if(robotIndexes_[1] == rIndex)
         {
             unactiveJointsName_[1] = robot_joints;
         }
@@ -60,14 +62,15 @@ public:
 
     std::vector<std::string> unactiveJoints(const int rIndex)
     {
-        if(r1Index_ == rIndex)
+        if(robotIndexes_[0] == rIndex)
         {
             return unactiveJointsName_[0];
         }
-        if(r2Index_ == rIndex)
+        if(robotIndexes_[1] == rIndex)
         {
             return unactiveJointsName_[1];
         }
+        return {};
     }
 
 
@@ -129,10 +132,6 @@ private:
     Eigen::VectorXd CSum_;
     // cache
     Eigen::MatrixXd preQ_;
-
-    int r1Index_;
-    int r2Index_;
-
 
     std::vector<Eigen::MatrixXd> J_;
     Eigen::VectorXd eval_;
