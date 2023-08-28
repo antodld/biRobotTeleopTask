@@ -23,6 +23,7 @@ add_project_dependency(sch-core REQUIRED NO_MODULE)
 add_project_dependency(eigen-qld REQUIRED NO_MODULE)
 add_project_dependency(Boost REQUIRED COMPONENTS filesystem timer ${BOOST_STACKTRACE})
 
+find_package(bilateralTeleop_dataLink REQUIRED)
 find_package(SpaceVecAlg REQUIRED)
 find_package(Boost REQUIRED COMPONENTS serialization)
 
