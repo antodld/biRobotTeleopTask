@@ -31,7 +31,7 @@ struct MC_TASKS_DLLAPI biRobotTeleopTask : public MetaTask
 
 public:
 
-    biRobotTeleopTask(const mc_solver::QPSolver & solver, unsigned int r1Index, unsigned int r2Index, bilateralTeleop::Limbs link1, bilateralTeleop::Limbs link2 ,double stiffness = 1., double weight = 10.);
+    biRobotTeleopTask(const mc_solver::QPSolver & solver, unsigned int r1Index, unsigned int r2Index, bilateralTeleop::Limbs link1 = bilateralTeleop::Limbs::LeftHand, bilateralTeleop::Limbs link2 = bilateralTeleop::Limbs::RightHand ,double stiffness = 1., double weight = 10.);
 
     void reset() override
     {
@@ -63,7 +63,13 @@ public:
                             const int rIndex,
                             const std::vector<std::string> & activeJointsName,
                             const std::map<std::string, std::vector<std::array<int, 2>>> & activeDofs = {});
-
+    /**
+     * @brief Dummy (To implement) use the other one
+     * 
+     * @param solver 
+     * @param activeJointsName 
+     * @param activeDofs 
+     */
     void selectActiveJoints(mc_solver::QPSolver & solver,
                             const std::vector<std::string> & activeJointsName,
                             const std::map<std::string, std::vector<std::array<int, 2>>> & activeDofs = {}) override;
@@ -77,6 +83,13 @@ public:
                             const std::vector<std::string> & unactiveJointsName,
                             const std::map<std::string, std::vector<std::array<int, 2>>> & unactiveDofs = {});
 
+    /**
+     * @brief Dummy (To implement) use the other one
+     * 
+     * @param solver 
+     * @param unactiveJointsName 
+     * @param unactiveDofs 
+     */
     void selectUnactiveJoints(mc_solver::QPSolver & solver,
                             const std::vector<std::string> & unactiveJointsName,
                             const std::map<std::string, std::vector<std::array<int, 2>>> & unactiveDofs = {}) override;
@@ -156,6 +169,48 @@ public:
     std::vector<bilateralTeleop::HumanPose> getHumanPose()
     {
         return {human_1_pose_,human_2_pose_};
+    }
+
+    bilateralTeleop::Limbs getTargetLink(const int rIndex)
+    {
+        if(rIndex == r1Index_)
+        {
+            return link_1;
+        }
+        else if(rIndex == r2Index_)
+        {
+            return link_2;
+        }
+        mc_rtc::log::error("[{}, getTargetLink] Robot index {} not in the task",name(),rIndex);
+        return bilateralTeleop::Limbs::LeftHand;
+    }
+
+    void setTargetLink(const int rIndex,const bilateralTeleop::Limbs link)
+    {
+        if(rIndex == r1Index_)
+        {
+            link_1 = link;
+        }
+        else if(rIndex == r2Index_)
+        {
+            link_2 = link;
+        }
+        mc_rtc::log::error("[{} , setTargetLink] Robot index {} not in the task",name(),rIndex);
+    }
+
+    std::string getLinkName(const int rIndex,bilateralTeleop::Limbs limb)
+    {
+        if(rIndex == r1Index_)
+        {
+            return robot_1_pose_links_.get(limb);
+        }
+        if(rIndex == r2Index_)
+        {
+            return robot_2_pose_links_.get(limb);
+        }
+        mc_rtc::log::error("[{} , setTargetLink] Robot index {} not in the task",name(),rIndex);
+        return "";
+
     }
 
 protected:

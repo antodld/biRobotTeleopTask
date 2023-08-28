@@ -13,12 +13,6 @@
 #include <RBDyn/MultiBody.h>
 #include <RBDyn/MultiBodyConfig.h>
 
-#include <mc_solver/TasksQPSolver.h>
-#include <mc_tasks/MetaTaskLoader.h>  
-#include <mc_rbdyn/configuration_io.h>
-
-#include <mc_rtc/gui/NumberInput.h>
-#include <mc_rtc/gui/Arrow.h>
 
 namespace tasks
 {
@@ -35,6 +29,7 @@ biRobotTeleopTask::biRobotTeleopTask(const std::vector<rbd::MultiBody> & mbs,
    posInQ_(2, -1), robotIndexes_({r1Index, r2Index}),Q_(), C_(),
   CSum_(Eigen::Vector6d::Zero()), preQ_()
 {
+  assert(r2Index < mbs.sze() && r1Index < mbs.size());
   dimWeight_ = Eigen::Vector6d::Ones() * weight;
   dimWeight_.segment(0,3).setZero();
   int maxDof = 0;
@@ -94,7 +89,7 @@ void biRobotTeleopTask::update(const std::vector<rbd::MultiBody> & mbs,
     int begin = posInQ_[i];
     int dof = data.alphaD(r);
 
-    Eigen::MatrixXd activeJointsMat = activeJointsMatrix(unactiveJointsName_[i],mbs[r]);
+    const Eigen::MatrixXd activeJointsMat = activeJointsMatrix(unactiveJointsName_[i],mbs[r]);
     const Eigen::MatrixXd J = J_[i];
     const Eigen::Matrix6d W = dimWeight_.asDiagonal();
     const Eigen::MatrixXd M =  W * J * activeJointsMat;
