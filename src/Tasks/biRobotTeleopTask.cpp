@@ -112,7 +112,8 @@ Eigen::MatrixXd biRobotTeleopTask::activeJointsMatrix(const std::vector<std::str
   for (auto & j : unactiveJointsNames)
   {
     int indx = getMatrixIndx(mb,mb.jointIndexByName(j));
-    dofMat(indx,indx) = 0;
+    const int dof = mb.joints()[mb.jointIndexByName(j)].dof();
+    dofMat.block(indx,indx,dof,dof) = Eigen::MatrixXd::Zero(dof,dof);
   }
 
   return dofMat;
