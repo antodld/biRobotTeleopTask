@@ -41,15 +41,52 @@ biRobotTeleopTask::biRobotTeleopTask(const mc_solver::QPSolver & solver, unsigne
 void biRobotTeleopTask::load(mc_solver::QPSolver & solver, const mc_rtc::Configuration & config)
 {
   MetaTask::load(solver, config);
-  const auto & conf = config("biRobotTeleop");
 
-  if(conf.has("stiffness")) { this->stiffness(conf("stiffness")); }
-  if(conf.has("weight")) { this->weight(conf("weight")); }
-  robot_1_pose_links_.load(conf("robot_1"));
-  robot_2_pose_links_.load(conf("robot_2"));
-  human_1_pose_.setCvx(conf("human"));
-  human_2_pose_.setCvx(conf("human"));
+  if(config.has("stiffness")) { this->stiffness(config("stiffness")); }
+  if(config.has("weight")) { this->weight(config("weight")); }
+  if(config.has("name")) { this->name(config("name")); }
+
+  human_1_pose_.setCvx(config("human")("convex"));
+  human_2_pose_.setCvx(config("human")("convex"));
+
+  if (config.has("robot_1"))
+  {
+    loadRobotConf(solver,r1Index_,config("robot_1"));
+  }
+  else
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("{[]} robot_1 configuration is not available. At least the limb map should be provided",name());
+  }
+  if (config.has("robot_2"))
+  {
+    loadRobotConf(solver,r2Index_,config("robot_2"));
+  }
+  else
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("{[]} robot_2 configuration is not available. At least the limb map should be provided",name());
+  }
+
 }
+
+void biRobotTeleopTask::loadRobotConf(mc_solver::QPSolver & solver, const int rIndex, const mc_rtc::Configuration & config)
+{
+  if (config.has("link"))
+  {
+    setTargetLink(rIndex, bilateralTeleop::str2Limb(config("link")));
+  }
+  if (config.has("active_joints"))
+  {
+    selectActiveJoints(solver,rIndex,config("active_joints"));
+  }
+  if (config.has("unactive_joints"))
+  {
+    selectUnactiveJoints(solver,rIndex,config("unactive_joints"));
+  }
+  if(rIndex == r1Index_){robot_1_pose_links_.load(config("limb_map"));}
+  else if (rIndex == r2Index_){robot_2_pose_links_.load(config("limb_map"));}
+
+}
+
 
 
 void biRobotTeleopTask::removeFromSolver(mc_solver::QPSolver & solver)
@@ -230,3 +267,28 @@ void biRobotTeleopTask::resetJointsSelector(mc_solver::QPSolver & solver)
 }
 
 } // namespace mc_tasks
+
+namespace
+{
+
+static auto registered = mc_tasks::MetaTaskLoader::register_load_function(
+    "biRobotTeleop",
+    [](mc_solver::QPSolver & solver, const mc_rtc::Configuration & config)
+    {
+      std::string robot_1_name = solver.robots().robot().name();
+      if(config("robot_1").has("name")){ config("robot_1")("name",robot_1_name);}
+      std::string robot_2_name = "";
+      if(config("robot_2").has("name")){ config("robot_2")("name",robot_2_name);}
+      else
+      {
+        mc_rtc::log::error_and_throw<std::runtime_error>("[biRobotTeleopTask] robot_2 name shoulde be provided in configuration");
+      }
+
+      const int r1 = solver.robots().robot(robot_1_name).robotIndex();
+      const int r2 = solver.robots().robot(robot_2_name).robotIndex();
+      auto t = std::make_shared<mc_tasks::biRobotTeleopTask>(solver,r1,r2);
+      t->reset();
+      t->load(solver, config);
+      return t;
+    });
+}

@@ -224,6 +224,8 @@ protected:
 
     void addToLogger(mc_rtc::Logger & logger) override;
 
+    void loadRobotConf(mc_solver::QPSolver & solver, const int rIndex, const mc_rtc::Configuration & conf);
+
 private:
 
     sch::Matrix4x4 convertTransfo(const sva::PTransformd & X_0_cvx)
