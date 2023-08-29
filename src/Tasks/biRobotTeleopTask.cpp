@@ -90,6 +90,7 @@ void biRobotTeleopTask::update(const std::vector<rbd::MultiBody> & mbs,
     int dof = data.alphaD(r);
 
     const Eigen::MatrixXd activeJointsMat = activeJointsMatrix(unactiveJointsName_[i],mbs[r]);
+
     const Eigen::MatrixXd J = J_[i];
     const Eigen::Matrix6d W = dimWeight_.asDiagonal();
     const Eigen::MatrixXd M =  W * J * activeJointsMat;

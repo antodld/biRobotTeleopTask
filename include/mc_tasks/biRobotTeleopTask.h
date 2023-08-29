@@ -47,12 +47,12 @@ public:
     */
     void dimWeight(const Eigen::VectorXd & dimW) override
     {
-        task.dimWeight(dimW);
+        task_.dimWeight(dimW);
     }
 
     Eigen::VectorXd dimWeight() const override
     {
-        return task.dimWeight();
+        return task_.dimWeight();
     }
 
     /*! \brief Select active joints for this task
@@ -104,24 +104,24 @@ public:
 
     Eigen::VectorXd eval() const override
     {
-        return task.eval();
+        return task_.eval();
     }
 
     Eigen::VectorXd speed() const override
     {
-        return task.speed();
+        return task_.speed();
     }
 
 
     void stiffness(double s)
     {
-        task.stiffness(s);
+        task_.stiffness(s);
     }
 
     /** Get the current task's stiffness */
     double stiffness() const
     {
-        return task.stiffness();
+        return task_.stiffness();
     }
 
     /** Set the task damping, leaving its stiffness unchanged
@@ -147,7 +147,7 @@ public:
     void weight(double w)
     {
         weight_ = w;
-        task.dimWeight(Eigen::Vector6d::Ones() * weight_);
+        task_.dimWeight(Eigen::Vector6d::Ones() * weight_);
     }
 
     /** Get task's weight */
@@ -175,13 +175,13 @@ public:
     {
         if(rIndex == r1Index_)
         {
-            return link_1;
+            return link_1_;
         }
         else if(rIndex == r2Index_)
         {
-            return link_2;
+            return link_2_;
         }
-        mc_rtc::log::error("[{}, getTargetLink] Robot index {} not in the task",name(),rIndex);
+        mc_rtc::log::error("[{} , getTargetLink] Robot index {} not in the task, available indexes : {} and {}",name(),rIndex,r1Index_,r2Index_);
         return bilateralTeleop::Limbs::LeftHand;
     }
 
@@ -189,14 +189,17 @@ public:
     {
         if(rIndex == r1Index_)
         {
-            link_1 = link;
+            link_1_ = link;
         }
         else if(rIndex == r2Index_)
         {
-            link_2 = link;
+            link_2_ = link;
         }
-        mc_rtc::log::error("[{} , setTargetLink] Robot index {} not in the task",name(),rIndex);
-    }
+        else
+        {
+            mc_rtc::log::error("[{} , setTargetLink] Robot index {} not in the task, available indexes : {} and {}",name(),rIndex,r1Index_,r2Index_);
+        }
+    }   
 
     std::string getLinkName(const int rIndex,bilateralTeleop::Limbs limb)
     {
@@ -208,7 +211,7 @@ public:
         {
             return robot_2_pose_links_.get(limb);
         }
-        mc_rtc::log::error("[{} , setTargetLink] Robot index {} not in the task",name(),rIndex);
+        mc_rtc::log::error("[{} , getLinkName] Robot index {} not in the task, available indexes : {} and {}",name(),rIndex,r1Index_,r2Index_);
         return "";
 
     }
@@ -295,7 +298,7 @@ private:
     return (sva::PTransformd(X_0_l.rotation().transpose(),Eigen::Vector3d::Zero()) * X_l_t) * v_l_l;
     }
 
-    tasks::qp::biRobotTeleopTask task;
+    tasks::qp::biRobotTeleopTask task_; 
 
     /** True if added to solver */
     bool inSolver_ = false;
@@ -309,19 +312,20 @@ private:
 
     double weight_ = 0;
 
-    bilateralTeleop::Limbs link_1;
-    bilateralTeleop::Limbs link_2;
+    bilateralTeleop::Limbs link_1_;
+    bilateralTeleop::Limbs link_2_;
+
 
     bilateralTeleop::RobotPose robot_1_pose_links_;
     bilateralTeleop::RobotPose robot_2_pose_links_;
     bilateralTeleop::RobotPose human_pose_links_;
     bilateralTeleop::HumanPose human_1_pose_;
     bilateralTeleop::HumanPose human_2_pose_;
-    Eigen::Vector3d robot_2_point = Eigen::Vector3d::Zero();
-    Eigen::Vector3d human_1_point = Eigen::Vector3d::Zero();
+    Eigen::Vector3d robot_2_point_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d human_1_point_ = Eigen::Vector3d::Zero();
 
-    Eigen::Vector3d robot_1_point = Eigen::Vector3d::Zero();
-    Eigen::Vector3d human_2_point = Eigen::Vector3d::Zero();
+    Eigen::Vector3d robot_1_point_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d human_2_point_ = Eigen::Vector3d::Zero();
 
     /** Store the previous eval vector */
     Eigen::VectorXd eval_;

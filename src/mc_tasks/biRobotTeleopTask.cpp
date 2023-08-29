@@ -19,6 +19,7 @@
 
 #include <mc_rtc/gui/NumberInput.h>
 #include <mc_rtc/gui/Arrow.h>
+#include <mc_rtc/gui/Label.h>
 
 
 
@@ -26,8 +27,8 @@ namespace mc_tasks
 {
 
 biRobotTeleopTask::biRobotTeleopTask(const mc_solver::QPSolver & solver, unsigned int r1Index, unsigned int r2Index, bilateralTeleop::Limbs link1, bilateralTeleop::Limbs link2 ,double stiffness, double weight)
-: robots_(solver.robots()), r1Index_(r1Index),r2Index_(r2Index), link_1(link1), link_2(link2),
-  dt_(solver.dt()),task(solver.robots().mbs(),r1Index,r2Index,stiffness,weight)
+: robots_(solver.robots()), r1Index_(r1Index),r2Index_(r2Index), link_1_(link1), link_2_(link2),
+  dt_(solver.dt()),task_(solver.robots().mbs(),r1Index,r2Index,stiffness,weight)
 {   
     
     eval_ = this->eval();
@@ -93,14 +94,14 @@ void biRobotTeleopTask::removeFromSolver(mc_solver::QPSolver & solver)
 {
     if(!inSolver_) { return; }
     inSolver_ = false;
-    tasks_solver(solver).removeTask(&task);
+    tasks_solver(solver).removeTask(&task_);
 }
 
 void biRobotTeleopTask::addToSolver(mc_solver::QPSolver & solver)
 {
     if(inSolver_) { return; }
     inSolver_ = true;
-    tasks_solver(solver).addTask(&task);
+    tasks_solver(solver).addTask(&task_);
 }
 
 void biRobotTeleopTask::update(mc_solver::QPSolver &)
@@ -109,15 +110,14 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     const mc_rbdyn::Robot & robot_2 = robots_.robot(r2Index_);
     const mc_rbdyn::Robot & robot_1 = robots_.robot(r1Index_);
 
-    const std::string robot_2_link_name = robot_2_pose_links_.get(link_2);
-    const std::string robot_1_link_name = robot_1_pose_links_.get(link_1);
+    const std::string robot_2_link_name = robot_2_pose_links_.get(link_2_);
+    const std::string robot_1_link_name = robot_1_pose_links_.get(link_1_);
 
-    auto robot_1_cvx = robot_1.convex(robot_1_link_name);
-    robot_1_cvx.second.get()->setTransformation(convertTransfo(robot_1.bodyPosW(robot_1_link_name)));
-    auto robot_2_cvx = robot_2.convex(robot_2_link_name);
-    robot_2_cvx.second.get()->setTransformation(convertTransfo(robot_2.bodyPosW(robot_2_link_name)));
-    auto human_1_cvx = human_1_pose_.getConvex(link_1);
-    auto human_2_cvx = human_2_pose_.getConvex(link_2);
+    const auto robot_1_cvx = robot_1.convex(robot_1_link_name);
+    const auto robot_2_cvx = robot_2.convex(robot_2_link_name);
+    auto human_1_cvx = human_1_pose_.getConvex(link_1_);
+    auto human_2_cvx = human_2_pose_.getConvex(link_2_);
+
 
     sch::CD_Pair pair_h1_r2(&human_1_cvx,robot_2_cvx.second.get());
     sch::CD_Pair pair_h2_r1(&human_2_cvx,robot_1_cvx.second.get());
@@ -125,13 +125,13 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     sch::Point3 p1, p2;
     pair_h1_r2.getClosestPoints(p1,p2);
 
-    human_1_point << p1[0],p1[1],p1[2];
-    robot_2_point << p2[0],p2[1],p2[2];
+    human_1_point_ << p1[0],p1[1],p1[2];
+    robot_2_point_ << p2[0],p2[1],p2[2];
 
     pair_h2_r1.getClosestPoints(p1,p2);
 
-    human_2_point << p1[0],p1[1],p1[2];
-    robot_1_point << p2[0],p2[1],p2[2];
+    human_2_point_ << p1[0],p1[1],p1[2];
+    robot_1_point_ << p2[0],p2[1],p2[2];
 
 
     sva::PTransformd X_h1_h1p = sva::PTransformd::Identity();
@@ -139,32 +139,38 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     sva::PTransformd X_r2_r2p = sva::PTransformd::Identity();
     sva::PTransformd X_r1_r1p = sva::PTransformd::Identity();
 
-    getOffset(X_r2_r2p,X_h1_h1p,pair_h1_r2,robot_2.bodyPosW(robot_2_link_name),human_1_pose_.getPose(link_1));
-    getOffset(X_r1_r1p,X_h2_h2p,pair_h2_r1,robot_1.bodyPosW(robot_1_link_name),human_2_pose_.getPose(link_2));
+    getOffset(X_r2_r2p,X_h1_h1p,pair_h1_r2,robot_2.bodyPosW(robot_2_link_name),human_1_pose_.getPose(link_1_));
+    getOffset(X_r1_r1p,X_h2_h2p,pair_h2_r1,robot_1.bodyPosW(robot_1_link_name),human_2_pose_.getPose(link_2_));
+
+
+    human_1_point_ = (X_h1_h1p * human_1_pose_.getPose(link_1_)).translation();
+    robot_2_point_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)).translation();
+    human_2_point_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)).translation();
+    robot_1_point_ = (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation();
 
     eval_.segment(3,3) =  (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)).translation() 
-                                - (X_h1_h1p * human_1_pose_.getPose(link_1)).translation()  
-                                - ( (X_h2_h2p * human_2_pose_.getPose(link_2)).translation() 
+                                - (X_h1_h1p * human_1_pose_.getPose(link_1_)).translation()  
+                                - ( (X_h2_h2p * human_2_pose_.getPose(link_2_)).translation() 
                                 - (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation());
 
     speed_.segment(3,3) =  getTargetVel(robot_2,robot_2_link_name,X_r2_r2p.translation()).linear()
-                        - human_1_pose_.getVel(link_1,X_h1_h1p).linear()  
-                        - (human_2_pose_.getVel(link_2,X_h2_h2p).linear() 
+                            - human_1_pose_.getVel(link_1_,X_h1_h1p).linear()  
+                            - (human_2_pose_.getVel(link_2_,X_h2_h2p).linear() 
                             - getTargetVel(robot_1,robot_1_link_name,X_r1_r1p.translation()).linear());
 
 
-    rbd::Jacobian robot_1_jac = rbd::Jacobian(robot_1.mb(),robot_1_link_name);
+    rbd::Jacobian robot_1_jac = rbd::Jacobian(robot_1.mb(),robot_1_link_name,X_r1_r1p.translation());
     const auto & shortJ1 = robot_1_jac.jacobian(robot_1.mb(),robot_1.mbc());
     Eigen::MatrixXd J1 = Eigen::MatrixXd::Zero(6,robot_1.mb().nrDof()); 
     robot_1_jac.fullJacobian(robot_1.mb(),shortJ1,J1); 
-    auto dot_J1 = robot_1_jac.jacobianDot(robot_1.mb(),robot_1.mbc());
+    const auto dot_J1 = robot_1_jac.jacobianDot(robot_1.mb(),robot_1.mbc());
 
 
-    rbd::Jacobian robot_2_jac = rbd::Jacobian(robot_2.mb(),robot_2_link_name);
+    rbd::Jacobian robot_2_jac = rbd::Jacobian(robot_2.mb(),robot_2_link_name,X_r2_r2p.translation());
     const auto & shortJ2 = robot_2_jac.jacobian(robot_2.mb(),robot_2.mbc());
     Eigen::MatrixXd J2 = Eigen::MatrixXd::Zero(6,robot_2.mb().nrDof()); 
     robot_2_jac.fullJacobian(robot_2.mb(),shortJ2,J2); 
-    auto dotJ2 = robot_2_jac.jacobianDot(robot_2.mb(),robot_2.mbc());
+    const auto dotJ2 = robot_2_jac.jacobianDot(robot_2.mb(),robot_2.mbc());
 
 
     Eigen::VectorXd dot_q2;
@@ -175,17 +181,15 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     get_q_dq(q1,dot_q1,robot_1,robot_1_jac);
 
 
-    task.setJacobians(J1,J2);
+    task_.setJacobians(J1,J2);
 
-    task.normalAcc(dotJ2 * dot_q2
-            - human_1_pose_.getAcc(link_1,X_h1_h1p).vector()
-            - (human_2_pose_.getAcc(link_2,X_h2_h2p).vector() - dot_J1 * dot_q1)
+    task_.normalAcc(dotJ2 * dot_q2
+            - human_1_pose_.getAcc(link_1_,X_h1_h1p).vector()
+            - (human_2_pose_.getAcc(link_2_,X_h2_h2p).vector() - dot_J1 * dot_q1)
             );
     
-    task.eval(eval_);
-    task.speed(speed_);
-
-
+    task_.eval(eval_);
+    task_.speed(speed_);
 
 }
 
@@ -204,12 +208,22 @@ void biRobotTeleopTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                      [this](const double & g) { this->stiffness(g); }),
                  mc_rtc::gui::NumberInput(
                      "weight", [this]() { return this->weight(); }, [this](const double & w) { this->weight(w); }),
-                 mc_rtc::gui::Arrow("h1 -> r2 convex distance",[this](){return  human_1_point;},
-                                                                    [this] (){return  robot_2_point; }),
-                  mc_rtc::gui::Arrow("h2 -> r1 convex distance",[this](){return  human_2_point;},
-                                                        [this] (){return  robot_1_point; })
+                 mc_rtc::gui::Arrow("h1 -> r2 convex distance",[this](){return  human_1_point_;},
+                                                                    [this] (){return  robot_2_point_; }),
+                  mc_rtc::gui::Arrow("h2 -> r1 convex distance",[this](){return  human_2_point_;},
+                                                        [this] (){return  robot_1_point_; })
                                                                     );
 
+  gui.addElement({"Tasks", name_, "Details"},
+                 mc_rtc::gui::Label("robot 1 : ",[this]() {return robots_.robot(r1Index_).name();}),
+                 
+                 mc_rtc::gui::Label("robot 2 : ",[this]() {return robots_.robot(r2Index_).name();}),
+
+                 mc_rtc::gui::Arrow("h1 -> r2 convex distance",[this](){return  human_1_point_;},
+                                                               [this] (){return  robot_2_point_; }),
+                 mc_rtc::gui::Arrow("r1 -> h2 convex distance",[this](){return  robot_1_point_;},
+                                                               [this] (){return  human_2_point_; })
+                 );
 
 }
 
@@ -242,8 +256,12 @@ void biRobotTeleopTask::selectUnactiveJoints(mc_solver::QPSolver &,
                                        const std::map<std::string, std::vector<std::array<int, 2>>> &)
 {
   ensureHasJoints(robots_.robot(rIndex), unactiveJointsName, "[" + name() + "::selectUnActiveJoints]");
-
-  task.unactiveJoints(unactiveJointsName,rIndex);
+  mc_rtc::log::info("[{}] adding for rIndex {} unactive joints :",name(),rIndex);
+  for(auto & n : unactiveJointsName)
+  {
+    mc_rtc::log::info(n);
+  }
+  task_.unactiveJoints(unactiveJointsName,rIndex);
 
 }
 void biRobotTeleopTask::selectUnactiveJoints(mc_solver::QPSolver &,
