@@ -139,8 +139,10 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     sva::PTransformd X_r2_r2p = sva::PTransformd::Identity();
     sva::PTransformd X_r1_r1p = sva::PTransformd::Identity();
 
-    getOffset(X_r2_r2p,X_h1_h1p,pair_h1_r2,robot_2.bodyPosW(robot_2_link_name),human_1_pose_.getPose(link_1_));
-    getOffset(X_r1_r1p,X_h2_h2p,pair_h2_r1,robot_1.bodyPosW(robot_1_link_name),human_2_pose_.getPose(link_2_));
+    // getOffset(X_r2_r2p,X_h1_h1p,pair_h1_r2,robot_2.bodyPosW(robot_2_link_name),human_1_pose_.getPose(link_1_));
+    // getOffset(X_r1_r1p,X_h2_h2p,pair_h2_r1,robot_1.bodyPosW(robot_1_link_name),human_2_pose_.getPose(link_2_));
+    // X_h2_h2p = X_r2_r2p;
+    // X_r1_r1p = X_h1_h1p;
 
 
     human_1_point_ = (X_h1_h1p * human_1_pose_.getPose(link_1_)).translation();
