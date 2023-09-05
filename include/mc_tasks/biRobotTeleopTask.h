@@ -347,6 +347,8 @@ private:
     Eigen::VectorXd eval_;
     /** Store the task speed */
     Eigen::VectorXd speed_;
+
+    mc_rtc::gui::ArrowConfig arrowConfig_;
 };
 
 using biRobotTelopTaskPtr = std::shared_ptr<biRobotTeleopTask>;

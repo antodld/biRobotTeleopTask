@@ -67,6 +67,11 @@ void biRobotTeleopTask::load(mc_solver::QPSolver & solver, const mc_rtc::Configu
     mc_rtc::log::error_and_throw<std::runtime_error>("{[]} robot_2 configuration is not available. At least the limb map should be provided",name());
   }
 
+  if(config.has("arrow"))
+  {
+    arrowConfig_.fromConfig(config("arrow"));
+  }
+
 }
 
 void biRobotTeleopTask::loadRobotConf(mc_solver::QPSolver & solver, const int rIndex, const mc_rtc::Configuration & config)
@@ -214,22 +219,17 @@ void biRobotTeleopTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                      "stiffness & damping", [this]() { return this->stiffness(); },
                      [this](const double & g) { this->stiffness(g); }),
                  mc_rtc::gui::NumberInput(
-                     "weight", [this]() { return this->weight(); }, [this](const double & w) { this->weight(w); }),
-                 mc_rtc::gui::Arrow("h1 -> r2 convex distance",[this](){return  human_1_point_;},
-                                                                    [this] (){return  robot_2_point_; }),
-                  mc_rtc::gui::Arrow("h2 -> r1 convex distance",[this](){return  human_2_point_;},
-                                                        [this] (){return  robot_1_point_; })
+                     "weight", [this]() { return this->weight(); }, [this](const double & w) { this->weight(w); })
                                                                     );
 
   gui.addElement({"Tasks", name_, "Details"},
                  mc_rtc::gui::Label("robot 1 : ",[this]() {return robots_.robot(r1Index_).name();}),
                  
                  mc_rtc::gui::Label("robot 2 : ",[this]() {return robots_.robot(r2Index_).name();}),
-
-                 mc_rtc::gui::Arrow("h1 -> r2 convex distance",[this](){return  human_1_point_;},
-                                                               [this] (){return  robot_2_point_; }),
-                 mc_rtc::gui::Arrow("r1 -> h2 convex distance",[this](){return  robot_1_point_;},
-                                                               [this] (){return  human_2_point_; })
+                 mc_rtc::gui::Arrow("h1 -> r2 convex distance",arrowConfig_,[this](){return  human_1_point_;},
+                                                                             [this] (){return  robot_2_point_; }),
+                  mc_rtc::gui::Arrow("h2 -> r1 convex distance",arrowConfig_,[this](){return  human_2_point_;},
+                                                                             [this] (){return  robot_1_point_; })
                  );
 
 }
