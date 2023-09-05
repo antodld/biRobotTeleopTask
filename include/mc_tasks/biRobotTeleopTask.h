@@ -216,6 +216,16 @@ public:
 
     }
 
+    /**
+     * @brief Get the Relative Transfo from human 1 to robot 2 and from robot 1 to human 2 in that order
+     * 
+     * @return std::vector<sva::PTransformd> 
+     */
+    std::vector<sva::PTransformd> getRelativeTransfo()
+    {
+        return {X_h1_r2_,X_r1_h2_};
+    }
+
 protected:
     void addToSolver(mc_solver::QPSolver & solver) override;
 
@@ -326,6 +336,12 @@ private:
 
     Eigen::Vector3d robot_1_point_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d human_2_point_ = Eigen::Vector3d::Zero();
+
+    //transfo from human_1 to robot_2
+    sva::PTransformd X_h1_r2_ = sva::PTransformd::Identity();
+
+    //transfo from robot to human_2
+    sva::PTransformd X_r1_h2_ = sva::PTransformd::Identity();
 
     /** Store the previous eval vector */
     Eigen::VectorXd eval_;

@@ -51,7 +51,6 @@ public:
 
         if(robotIndexes_[0] == rIndex)
         {
-            std::cout << "here" << std::endl;
             unactiveJointsName_[0] = robot_joints;
         }
         if(robotIndexes_[1] == rIndex)
