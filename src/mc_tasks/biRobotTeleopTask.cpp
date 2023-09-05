@@ -198,8 +198,10 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
 
 void biRobotTeleopTask::addToLogger(mc_rtc::Logger & logger)
 {
+  MetaTask::addToLogger(logger);
   logger.addLogEntry(name_ + "_eval", this, [this]() { return eval(); });
   logger.addLogEntry(name_ + "_speed", this, [this]() -> const Eigen::VectorXd & { return speed_; });
+  logger.addLogEntry(name_ + "_weight", this, [this]() -> const double & { return weight_; });
 }
 
 void biRobotTeleopTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
