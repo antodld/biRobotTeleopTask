@@ -18,32 +18,60 @@ private:
     motion vel_;
     motion acc_;
 
+    std::vector<sch::S_Cylinder> convex_;
+    std::map<bilateralTeleop::Limbs, Eigen::Vector3d> axis_;
 
-    sch::S_Cylinder arm_cvx_ = sch::S_Cylinder(sch::Point3(0,0,-1),sch::Point3(0,0,1),0.1);
-    sch::S_Cylinder forearm_cvx_ = sch::S_Cylinder(sch::Point3(0,0,-1),sch::Point3(0,0,1),0.1);
-    sch::S_Cylinder hand_cvx_ = sch::S_Cylinder(sch::Point3(0,0,-1),sch::Point3(0,0,1),0.1);
 
 public:
 
+  HumanPose()
+  {
+    convex_.clear();
+    for (int partInt = bilateralTeleop::Limbs::Head ; partInt <= bilateralTeleop::Limbs::RightArm ; partInt++)
+    {
+      Limbs part = static_cast<Limbs>(partInt);
+      convex_.push_back(sch::S_Cylinder(sch::Point3(0,0,-1),sch::Point3(0,0,1),0.1));
+      axis_[part] = Eigen::Vector3d{0,0,1.};
+    }
+
+  }
+
   void setCvx(const mc_rtc::Configuration & config)
   {
-
     Eigen::Vector2d length = config("arm")("length");
     double radius = config("arm")("radius");
-    Eigen::Vector3d axis = config("arm")("axis");
-    arm_cvx_ = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
+    Eigen::Vector3d axis = config("arm")("axis")("left");
+    axis_[LeftArm] = axis;
+    convex_[LeftArm] = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
+                                       sch::Point3(axis.x(),axis.y(),axis.z()) * length.y(),radius);
+    axis = config("arm")("axis")("right");
+    axis_[RightArm] = axis;
+    convex_[RightArm] = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
                               sch::Point3(axis.x(),axis.y(),axis.z()) * length.y(),radius);
 
     length = config("forearm")("length");
     radius = config("forearm")("radius");
-    axis = config("forearm")("axis");
-    forearm_cvx_ = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
-                              sch::Point3(axis.x(),axis.y(),axis.z()) *  length.y(),radius);
+    axis = config("forearm")("axis")("left");
+    axis_[LeftForearm] = axis;
+    convex_[LeftForearm] = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
+                              sch::Point3(axis.x(),axis.y(),axis.z()) * length.y(),radius);
+
+    axis = config("forearm")("axis")("right");
+    axis_[RightForearm] = axis;
+    convex_[RightForearm] = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
+                              sch::Point3(axis.x(),axis.y(),axis.z()) * length.y(),radius);
+
     length = config("hand")("length");
     radius = config("hand")("radius");
-    axis = config("hand")("axis");
-    hand_cvx_ = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
-                              sch::Point3(axis.x(),axis.y(),axis.z()) *  length.y(),radius);
+    axis = config("hand")("axis")("left");
+    axis_[LeftHand] = axis;
+    convex_[LeftHand] = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
+                              sch::Point3(axis.x(),axis.y(),axis.z()) * length.y(),radius);
+
+    axis = config("hand")("axis")("right");
+    axis_[RightHand] = axis;  
+    convex_[RightHand] = sch::S_Cylinder(sch::Point3(axis.x(),axis.y(),axis.z()) * - length.x(),
+                              sch::Point3(axis.x(),axis.y(),axis.z()) * length.y(),radius);
 
   }
 
@@ -69,23 +97,12 @@ public:
 
   sch::S_Cylinder getConvex(bilateralTeleop::Limbs limb)
   {
-
-      if(limb == bilateralTeleop::Limbs::RightArm || limb == bilateralTeleop::Limbs::LeftArm)
-      {
-        return applyTransformation(arm_cvx_,getPose(limb));
-      }
-      if(limb == bilateralTeleop::Limbs::RightForearm || limb == bilateralTeleop::Limbs::LeftForearm)
-      {
-        return applyTransformation(forearm_cvx_,getPose(limb));
-      }
-
-      else
-      {
-        return applyTransformation(hand_cvx_,getPose(limb));
-      }
-    
+    return applyTransformation(convex_[limb],getPose(limb)); 
   }
-
+  Eigen::Vector3d getAxis(bilateralTeleop::Limbs limb)
+  {
+    return axis_[limb];
+  }
 
   sva::PTransformd getPose(bilateralTeleop::Limbs limb)
   {
@@ -117,6 +134,17 @@ public:
     acc_.add(limb,acc);
   }
 
+  void updateHumanState(HumanPose & human)
+  {
+    for (int partInt = bilateralTeleop::Limbs::Head ; partInt <= bilateralTeleop::Limbs::RightArm ; partInt++)
+    {
+      Limbs limb = static_cast<Limbs>(partInt);
+      setPose(limb,human.getPose(limb));
+      setVel(limb,human.getVel(limb));
+      setAcc(limb,human.getAcc(limb));
+    } 
+  }
+
 };
 
 struct RobotPose
@@ -124,36 +152,55 @@ struct RobotPose
 private:
 
     std::map<bilateralTeleop::Limbs, std::string> links_;
+    std::map<bilateralTeleop::Limbs, Eigen::Vector3d> axis_;
 
 public:
 
   RobotPose()
   {
-    for (int partInt = Limbs::Head ; partInt != Limbs::RightArm ; partInt++) {
+    for (int partInt = Limbs::Head ; partInt <= Limbs::RightArm ; partInt++)
+    {
       Limbs part = static_cast<Limbs>(partInt);
       links_[part] = "";
+      axis_[part] = Eigen::Vector3d{0,0,1};
     }
   }
 
   void load(const mc_rtc::Configuration & config)
   {
-    set(Limbs::LeftHand,config("left_hand"));
-    set(Limbs::RightHand,config("right_hand"));
-    set(Limbs::LeftArm,config("left_arm"));
-    set(Limbs::RightArm,config("right_arm"));
-    set(Limbs::LeftForearm,config("left_forearm"));
-    set(Limbs::RightForearm,config("right_forearm"));
-    set(Limbs::Pelvis,config("pelvis"));
+    setName(Limbs::LeftHand,config("left_hand")("name"));
+    setName(Limbs::RightHand,config("right_hand")("name"));
+    setName(Limbs::LeftArm,config("left_arm")("name"));
+    setName(Limbs::RightArm,config("right_arm")("name"));
+    setName(Limbs::LeftForearm,config("left_forearm")("name"));
+    setName(Limbs::RightForearm,config("right_forearm")("name"));
+    setName(Limbs::Pelvis,config("pelvis")("name"));
+    
+    setAxis(Limbs::LeftHand,config("left_hand")("axis"));
+    setAxis(Limbs::RightHand,config("right_hand")("axis"));
+    setAxis(Limbs::LeftArm,config("left_arm")("axis"));
+    setAxis(Limbs::RightArm,config("right_arm")("axis"));
+    setAxis(Limbs::LeftForearm,config("left_forearm")("axis"));
+    setAxis(Limbs::RightForearm,config("right_forearm")("axis"));
   }
 
-  void set(Limbs part,const std::string & name)
+  void setName(Limbs part,const std::string & name)
   {
     links_[part] = name; 
   }
+  void setAxis(Limbs part,const Eigen::Vector3d & axis)
+  {
+    axis_[part] = axis; 
+  }
 
-  std::string get(const Limbs part)
+  std::string getName(const Limbs part)
   {
     return links_[part];
+  }
+
+  Eigen::Vector3d getAxis(const Limbs part)
+  {
+    return axis_[part];
   }
 
 };

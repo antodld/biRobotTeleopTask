@@ -159,11 +159,10 @@ public:
     /** True if the task is in the solver */
     bool inSolver() const;
 
-    void updateHuman(const bilateralTeleop::HumanPose & human_1, const bilateralTeleop::HumanPose & human_2)
+    void updateHuman(bilateralTeleop::HumanPose & human_1, bilateralTeleop::HumanPose & human_2)
     {
-        human_1_pose_ = human_1;
-        human_2_pose_ = human_2;
- 
+        human_1_pose_.updateHumanState(human_1);
+        human_2_pose_.updateHumanState(human_2);
     }
 
     std::vector<bilateralTeleop::HumanPose> getHumanPose()
@@ -205,11 +204,11 @@ public:
     {
         if(rIndex == r1Index_)
         {
-            return robot_1_pose_links_.get(limb);
+            return robot_1_pose_links_.getName(limb);
         }
         if(rIndex == r2Index_)
         {
-            return robot_2_pose_links_.get(limb);
+            return robot_2_pose_links_.getName(limb);
         }
         mc_rtc::log::error("[{} , getLinkName] Robot index {} not in the task, available indexes : {} and {}",name(),rIndex,r1Index_,r2Index_);
         return "";
@@ -234,6 +233,8 @@ protected:
     void update(mc_solver::QPSolver &) override;
 
     void addToGUI(mc_rtc::gui::StateBuilder &) override;
+
+    void removeFromGUI(mc_rtc::gui::StateBuilder &) override;
 
     void addToLogger(mc_rtc::Logger & logger) override;
 
@@ -295,18 +296,15 @@ private:
         X_h_hOff = sva::PTransformd(X_0_humanLink.rotation(),human_point_link) * X_0_humanLink.inv();
 
     }
-    void removeRootDofAndRotComp(Eigen::MatrixXd & J)
-    {
-        J.block(0,0,6,6).setZero();
-        J.block(0,0,3,J.cols()).setZero();
-    }
+
     sva::MotionVecd getTargetVel(const mc_rbdyn::Robot & robot, const std::string & link ,const Eigen::Vector3d & off)
     {
-    const sva::MotionVecd v_l_l = robot.bodyVelB(link);
-    const sva::PTransformd X_0_l = robot.bodyPosW(link);
-    const sva::PTransformd X_l_t = sva::PTransformd(Eigen::Matrix3d::Identity(),off);
-    return (sva::PTransformd(X_0_l.rotation().transpose(),Eigen::Vector3d::Zero()) * X_l_t) * v_l_l;
+        const sva::MotionVecd v_l_l = robot.bodyVelB(link);
+        const sva::PTransformd X_0_l = robot.bodyPosW(link);
+        const sva::PTransformd X_l_t = sva::PTransformd(Eigen::Matrix3d::Identity(),off);
+        return (sva::PTransformd(X_0_l.rotation().transpose(),Eigen::Vector3d::Zero()) * X_l_t) * v_l_l;
     }
+
 
     tasks::qp::biRobotTeleopTask task_; 
 
@@ -316,6 +314,8 @@ private:
     const mc_rbdyn::Robots & robots_;
     unsigned int r2Index_ = 1;
     unsigned int r1Index_ = 0;
+
+    unsigned int main_indx_ = 0;
 
     /** Solver timestep */
     double dt_ = 0.005;

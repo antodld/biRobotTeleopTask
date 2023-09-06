@@ -61,6 +61,10 @@ void biRobotTeleopTask::load(mc_solver::QPSolver & solver, const mc_rtc::Configu
   if (config.has("robot_2"))
   {
     loadRobotConf(solver,r2Index_,config("robot_2"));
+    if(config("robot_2").has("isMainRobot"))
+    {
+      main_indx_ = 1;
+    }
   }
   else
   {
@@ -115,8 +119,8 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     const mc_rbdyn::Robot & robot_2 = robots_.robot(r2Index_);
     const mc_rbdyn::Robot & robot_1 = robots_.robot(r1Index_);
 
-    const std::string robot_2_link_name = robot_2_pose_links_.get(link_2_);
-    const std::string robot_1_link_name = robot_1_pose_links_.get(link_1_);
+    const std::string robot_2_link_name = robot_2_pose_links_.getName(link_2_);
+    const std::string robot_1_link_name = robot_1_pose_links_.getName(link_1_);
 
     const auto robot_1_cvx = robot_1.convex(robot_1_link_name);
     const auto robot_2_cvx = robot_2.convex(robot_2_link_name);
@@ -144,17 +148,29 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     sva::PTransformd X_r2_r2p = sva::PTransformd::Identity();
     sva::PTransformd X_r1_r1p = sva::PTransformd::Identity();
 
-    // getOffset(X_r2_r2p,X_h1_h1p,pair_h1_r2,robot_2.bodyPosW(robot_2_link_name),human_1_pose_.getPose(link_1_));
-    // getOffset(X_r1_r1p,X_h2_h2p,pair_h2_r1,robot_1.bodyPosW(robot_1_link_name),human_2_pose_.getPose(link_2_));
-    // X_h2_h2p = X_r2_r2p;
-    // X_r1_r1p = X_h1_h1p;
+    getOffset(X_r2_r2p,X_h1_h1p,pair_h1_r2,robot_2.bodyPosW(robot_2_link_name),human_1_pose_.getPose(link_1_));
+    getOffset(X_r1_r1p,X_h2_h2p,pair_h2_r1,robot_1.bodyPosW(robot_1_link_name),human_2_pose_.getPose(link_2_));
 
+    if(main_indx_ == 0)
+    {
+      const double proj_h1 = X_h1_h1p.translation().transpose() * human_1_pose_.getAxis(link_1_);
+      const double proj_r2 = X_r2_r2p.translation().transpose() * robot_2_pose_links_.getAxis(link_2_);
+      X_r1_r1p = sva::PTransformd(Eigen::Matrix3d::Identity(),proj_h1 * robot_1_pose_links_.getAxis(link_1_));
+      X_h2_h2p = sva::PTransformd(Eigen::Matrix3d::Identity(),proj_r2 * human_2_pose_.getAxis(link_2_));
+    }
+    else
+    {
+      const double proj_h2 = X_h2_h2p.translation().transpose() * human_2_pose_.getAxis(link_2_);
+      const double proj_r1 = X_r1_r1p.translation().transpose() * robot_1_pose_links_.getAxis(link_1_);
+      X_h1_h1p = sva::PTransformd(Eigen::Matrix3d::Identity(),proj_r1 * human_1_pose_.getAxis(link_1_));
+      X_r2_r2p = sva::PTransformd(Eigen::Matrix3d::Identity(),proj_h2 * robot_2_pose_links_.getAxis(link_2_));
+    }
 
     human_1_point_ = (X_h1_h1p * human_1_pose_.getPose(link_1_)).translation();
     robot_2_point_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)).translation();
     human_2_point_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)).translation();
     robot_1_point_ = (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation();
-
+  
     X_h1_r2_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)) * (X_h1_h1p * human_1_pose_.getPose(link_1_)).inv();
     X_r1_h2_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)) * (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).inv();
 
@@ -225,13 +241,34 @@ void biRobotTeleopTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
   gui.addElement({"Tasks", name_, "Details"},
                  mc_rtc::gui::Label("robot 1 : ",[this]() {return robots_.robot(r1Index_).name();}),
                  
-                 mc_rtc::gui::Label("robot 2 : ",[this]() {return robots_.robot(r2Index_).name();}),
-                 mc_rtc::gui::Arrow("h1 -> r2 convex distance",arrowConfig_,[this](){return  human_1_point_;},
-                                                                             [this] (){return  robot_2_point_; }),
-                  mc_rtc::gui::Arrow("h2 -> r1 convex distance",arrowConfig_,[this](){return  human_2_point_;},
-                                                                             [this] (){return  robot_1_point_; })
+                 mc_rtc::gui::Label("robot 2 : ",[this]() {return robots_.robot(r2Index_).name();})
                  );
 
+  if(main_indx_ == 0)
+  {
+    gui.addElement({"Tasks", name_, "Details"},
+
+                  mc_rtc::gui::Arrow("h1 -> r2 convex distance",arrowConfig_,[this](){return  human_1_point_;},
+                                                                              [this] (){return  robot_2_point_; }),
+                  mc_rtc::gui::Arrow("r1 -> h2 convex distance",arrowConfig_,[this](){return robot_1_point_;},
+                                                                              [this] (){return  human_2_point_; }));    
+  }
+  else
+  {
+    gui.addElement({"Tasks", name_, "Details"},
+
+                  mc_rtc::gui::Arrow("r2 -> h1 convex distance",arrowConfig_,[this](){return  robot_2_point_;},
+                                                                              [this] (){return  human_1_point_; }),
+                  mc_rtc::gui::Arrow("h2 -> r1 convex distance",arrowConfig_,[this](){return human_2_point_;},
+                                                                              [this] (){return  robot_1_point_ ; }));    
+  }
+
+}
+
+void biRobotTeleopTask::removeFromGUI(mc_rtc::gui::StateBuilder & gui)
+{
+  MetaTask::removeFromGUI(gui);
+  gui.removeCategory({"Task",name_});
 }
 
 void biRobotTeleopTask::selectActiveJoints(mc_solver::QPSolver & solver,
