@@ -15,7 +15,7 @@
 #include <RBDyn/MultiBody.h>
 #include <RBDyn/MultiBodyConfig.h>
 #include "../../include/Tasks/biRobotTeleopTask.h"
-#include "../../include/bilateralteleop/HumanRobotPose.h"
+#include "../../include/biRobotTeleop/HumanRobotPose.h"
 #include <sch/S_Object/S_Sphere.h>
 #include <sch/S_Object/S_Cylinder.h>
 #include <sch/S_Polyhedron/S_Polyhedron.h>
@@ -31,7 +31,7 @@ struct MC_TASKS_DLLAPI biRobotTeleopTask : public MetaTask
 
 public:
 
-    biRobotTeleopTask(const mc_solver::QPSolver & solver, unsigned int r1Index, unsigned int r2Index, bilateralTeleop::Limbs link1 = bilateralTeleop::Limbs::LeftHand, bilateralTeleop::Limbs link2 = bilateralTeleop::Limbs::RightHand ,double stiffness = 1., double weight = 10.);
+    biRobotTeleopTask(const mc_solver::QPSolver & solver, unsigned int r1Index, unsigned int r2Index, biRobotTeleop::Limbs link1 = biRobotTeleop::Limbs::LeftHand, biRobotTeleop::Limbs link2 = biRobotTeleop::Limbs::RightHand ,double stiffness = 1., double weight = 10.);
 
     void reset() override
     {
@@ -159,18 +159,18 @@ public:
     /** True if the task is in the solver */
     bool inSolver() const;
 
-    void updateHuman(bilateralTeleop::HumanPose & human_1, bilateralTeleop::HumanPose & human_2)
+    void updateHuman(biRobotTeleop::HumanPose & human_1, biRobotTeleop::HumanPose & human_2)
     {
         human_1_pose_.updateHumanState(human_1);
         human_2_pose_.updateHumanState(human_2);
     }
 
-    std::vector<bilateralTeleop::HumanPose> getHumanPose()
+    std::vector<biRobotTeleop::HumanPose> getHumanPose()
     {
         return {human_1_pose_,human_2_pose_};
     }
 
-    bilateralTeleop::Limbs getTargetLink(const int rIndex)
+    biRobotTeleop::Limbs getTargetLink(const int rIndex)
     {
         if(rIndex == r1Index_)
         {
@@ -181,10 +181,10 @@ public:
             return link_2_;
         }
         mc_rtc::log::error("[{} , getTargetLink] Robot index {} not in the task, available indexes : {} and {}",name(),rIndex,r1Index_,r2Index_);
-        return bilateralTeleop::Limbs::LeftHand;
+        return biRobotTeleop::Limbs::LeftHand;
     }
 
-    void setTargetLink(const int rIndex,const bilateralTeleop::Limbs link)
+    void setTargetLink(const int rIndex,const biRobotTeleop::Limbs link)
     {
         if(rIndex == r1Index_)
         {
@@ -200,7 +200,7 @@ public:
         }
     }   
 
-    std::string getLinkName(const int rIndex,bilateralTeleop::Limbs limb)
+    std::string getLinkName(const int rIndex,biRobotTeleop::Limbs limb)
     {
         if(rIndex == r1Index_)
         {
@@ -322,15 +322,15 @@ private:
 
     double weight_ = 0;
 
-    bilateralTeleop::Limbs link_1_;
-    bilateralTeleop::Limbs link_2_;
+    biRobotTeleop::Limbs link_1_;
+    biRobotTeleop::Limbs link_2_;
 
 
-    bilateralTeleop::RobotPose robot_1_pose_links_;
-    bilateralTeleop::RobotPose robot_2_pose_links_;
-    bilateralTeleop::RobotPose human_pose_links_;
-    bilateralTeleop::HumanPose human_1_pose_;
-    bilateralTeleop::HumanPose human_2_pose_;
+    biRobotTeleop::RobotPose robot_1_pose_links_;
+    biRobotTeleop::RobotPose robot_2_pose_links_;
+    biRobotTeleop::RobotPose human_pose_links_;
+    biRobotTeleop::HumanPose human_1_pose_;
+    biRobotTeleop::HumanPose human_2_pose_;
     Eigen::Vector3d robot_2_point_ = Eigen::Vector3d::Zero();
     Eigen::Vector3d human_1_point_ = Eigen::Vector3d::Zero();
 

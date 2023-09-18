@@ -1,11 +1,14 @@
 
-#bilateralteleop
+#biRobotTeleop
 
 # header-only
 set(utils_HDR_DIR
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/bilateralteleop>$<INSTALL_INTERFACE:include/bilateralteleop>)
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/biRobotTeleop>$<INSTALL_INTERFACE:include/biRobotTeleop>)
 
 set(utils_HDR
+  ${utils_HDR_DIR}/motion.h
+  ${utils_HDR_DIR}/transformation.h
+  ${utils_HDR_DIR}/type.h
   ${utils_HDR_DIR}/HumanRobotPose.h
 )
 
@@ -14,7 +17,7 @@ add_library(utils_${PROJECT_NAME} INTERFACE)
 if(COMMAND target_sources)
   target_sources(utils_${PROJECT_NAME} INTERFACE ${utils_HDR})
 endif()
-add_library(bilateralteleop_utils ALIAS utils_${PROJECT_NAME})
+add_library(biRobotTeleop_utils ALIAS utils_${PROJECT_NAME})
 
 install(TARGETS utils_${PROJECT_NAME} 
   EXPORT "${TARGETS_EXPORT_NAME}"

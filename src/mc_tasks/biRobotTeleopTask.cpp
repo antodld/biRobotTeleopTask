@@ -26,7 +26,7 @@
 namespace mc_tasks
 {
 
-biRobotTeleopTask::biRobotTeleopTask(const mc_solver::QPSolver & solver, unsigned int r1Index, unsigned int r2Index, bilateralTeleop::Limbs link1, bilateralTeleop::Limbs link2 ,double stiffness, double weight)
+biRobotTeleopTask::biRobotTeleopTask(const mc_solver::QPSolver & solver, unsigned int r1Index, unsigned int r2Index, biRobotTeleop::Limbs link1, biRobotTeleop::Limbs link2 ,double stiffness, double weight)
 : robots_(solver.robots()), r1Index_(r1Index),r2Index_(r2Index), link_1_(link1), link_2_(link2),
   dt_(solver.dt()),task_(solver.robots().mbs(),r1Index,r2Index,stiffness,weight)
 {   
@@ -82,7 +82,7 @@ void biRobotTeleopTask::loadRobotConf(mc_solver::QPSolver & solver, const int rI
 {
   if (config.has("link"))
   {
-    setTargetLink(rIndex, bilateralTeleop::str2Limb(config("link")));
+    setTargetLink(rIndex, biRobotTeleop::str2Limb(config("link")));
   }
   if (config.has("active_joints"))
   {
@@ -148,28 +148,38 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     sva::PTransformd X_r2_r2p = sva::PTransformd::Identity();
     sva::PTransformd X_r1_r1p = sva::PTransformd::Identity();
 
-    getOffset(X_r2_r2p,X_h1_h1p,pair_h1_r2,robot_2.bodyPosW(robot_2_link_name),human_1_pose_.getPose(link_1_));
-    getOffset(X_r1_r1p,X_h2_h2p,pair_h2_r1,robot_1.bodyPosW(robot_1_link_name),human_2_pose_.getPose(link_2_));
 
     if(main_indx_ == 0)
     {
-      const double proj_h1 = X_h1_h1p.translation().transpose() * human_1_pose_.getAxis(link_1_);
-      const double proj_r2 = X_r2_r2p.translation().transpose() * robot_2_pose_links_.getAxis(link_2_);
-      X_r1_r1p = sva::PTransformd(Eigen::Matrix3d::Identity(),proj_h1 * robot_1_pose_links_.getAxis(link_1_));
-      X_h2_h2p = sva::PTransformd(Eigen::Matrix3d::Identity(),proj_r2 * human_2_pose_.getAxis(link_2_));
+      getOffset(X_r2_r2p,X_h1_h1p,pair_h1_r2,
+                robot_2_pose_links_.getOffset(link_2_) * robot_2.bodyPosW(robot_2_link_name),
+                human_1_pose_.getOffset(link_1_) * human_1_pose_.getPose(link_1_));
+      X_r1_r1p =  X_h1_h1p ; 
+      X_h2_h2p =  X_r2_r2p ; 
     }
     else
     {
-      const double proj_h2 = X_h2_h2p.translation().transpose() * human_2_pose_.getAxis(link_2_);
-      const double proj_r1 = X_r1_r1p.translation().transpose() * robot_1_pose_links_.getAxis(link_1_);
-      X_h1_h1p = sva::PTransformd(Eigen::Matrix3d::Identity(),proj_r1 * human_1_pose_.getAxis(link_1_));
-      X_r2_r2p = sva::PTransformd(Eigen::Matrix3d::Identity(),proj_h2 * robot_2_pose_links_.getAxis(link_2_));
+      getOffset(X_r1_r1p,X_h2_h2p,pair_h2_r1, 
+                robot_1_pose_links_.getOffset(link_1_) * robot_1.bodyPosW(robot_1_link_name),
+                human_2_pose_.getOffset(link_2_) * human_2_pose_.getPose(link_2_));
+      X_r2_r2p = X_h2_h2p ; 
+      X_h1_h1p = X_r1_r1p ; 
     }
+
+    X_r1_r1p = X_r1_r1p * robot_1_pose_links_.getOffset(link_1_);
+    X_r2_r2p = X_r2_r2p * robot_2_pose_links_.getOffset(link_2_);
+    X_h1_h1p = X_h1_h1p * human_1_pose_.getOffset(link_1_);
+    X_h2_h2p = X_h2_h2p * human_2_pose_.getOffset(link_2_);
 
     human_1_point_ = (X_h1_h1p * human_1_pose_.getPose(link_1_)).translation();
     robot_2_point_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)).translation();
     human_2_point_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)).translation();
     robot_1_point_ = (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation();
+
+    X_h1_h1p = sva::PTransformd::Identity();
+    X_h2_h2p = sva::PTransformd::Identity();
+    X_r2_r2p = sva::PTransformd::Identity();
+    X_r1_r1p = sva::PTransformd::Identity();
   
     X_h1_r2_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)) * (X_h1_h1p * human_1_pose_.getPose(link_1_)).inv();
     X_r1_h2_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)) * (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).inv();
@@ -177,12 +187,12 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     eval_.segment(3,3) =  (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)).translation() 
                                 - (X_h1_h1p * human_1_pose_.getPose(link_1_)).translation()  
                                 - ( (X_h2_h2p * human_2_pose_.getPose(link_2_)).translation() 
-                                - (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation());
+                                    - (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation());
 
     speed_.segment(3,3) =  getTargetVel(robot_2,robot_2_link_name,X_r2_r2p.translation()).linear()
                             - human_1_pose_.getVel(link_1_,X_h1_h1p).linear()  
                             - (human_2_pose_.getVel(link_2_,X_h2_h2p).linear() 
-                            - getTargetVel(robot_1,robot_1_link_name,X_r1_r1p.translation()).linear());
+                                - getTargetVel(robot_1,robot_1_link_name,X_r1_r1p.translation()).linear());
 
 
     rbd::Jacobian robot_1_jac = rbd::Jacobian(robot_1.mb(),robot_1_link_name,X_r1_r1p.translation());

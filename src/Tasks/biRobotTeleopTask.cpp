@@ -89,7 +89,7 @@ void biRobotTeleopTask::update(const std::vector<rbd::MultiBody> & mbs,
     int begin = posInQ_[i];
     int dof = data.alphaD(r);
 
-    const Eigen::MatrixXd activeJointsMat = activeJointsMatrix(unactiveJointsName_[i],mbs[r]);
+    const Eigen::MatrixXd activeJointsMat = activeJointsMatrix(unactiveJointsName_[i],mbs[r]) ;
 
     const Eigen::MatrixXd J = J_[i];
     const Eigen::Matrix6d W = dimWeight_.asDiagonal();
@@ -113,6 +113,7 @@ Eigen::MatrixXd biRobotTeleopTask::activeJointsMatrix(const std::vector<std::str
   for (auto & j : unactiveJointsNames)
   {
     int indx = getMatrixIndx(mb,mb.jointIndexByName(j));
+    // std::cout << "name " << j << " row " << indx  << " j indx " << mb.jointIndexByName(j) << std::endl;
     const int dof = mb.joints()[mb.jointIndexByName(j)].dof();
     dofMat.block(indx,indx,dof,dof) = Eigen::MatrixXd::Zero(dof,dof);
   }
