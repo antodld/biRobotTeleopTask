@@ -7,8 +7,6 @@
 #include "transformation.h"
 #include "motion.h"
 #include "boost_serialization_eigen.h"
-#include "boost_serialization_sva.h"
-#include "boost_serialization_sch.h"
 #include <sch/S_Object/S_Cylinder.h>
 #include <sch/S_Object/S_Sphere.h>
 
@@ -19,12 +17,13 @@ struct HumanPose
 {
 
 private:
-    transformation pose_;
-    motion vel_;
-    motion acc_;
+    transformation pose_; //From the world frame to the link frame
+    motion vel_; //written in the body frame oriented as the world frame
+    motion acc_; //written in the body frame oriented as the world frame
 
-    std::map<Limbs, Eigen::Vector3d> axis_;
-    transformation limbs_offset_;
+    //offset are made such as : when the arm are alongside the body, all the links frame orientation are matching the world frame,
+    //the link frame position should be at the parent joint 
+    transformation limbs_offset_; 
     std::map<Limbs, double> convex_radius_;
     std::map<Limbs, double> convex_length_;
     
@@ -33,7 +32,7 @@ private:
     void serialize(Archive& ar, const unsigned int version) {
         ar & pose_;
         ar & vel_;
-        ar & axis_;
+        ar & acc_;
         ar & limbs_offset_;
         ar & convex_radius_;
         ar & convex_length_;
@@ -47,7 +46,6 @@ public:
     for (int partInt = Limbs::Head ; partInt <= Limbs::RightArm ; partInt++)
     {
       Limbs part = static_cast<Limbs>(partInt);
-      axis_[part] = Eigen::Vector3d{0,0,1.};
       convex_length_[part] = 1;
       convex_radius_[part] = 1;
       limbs_offset_.add(part,sva::PTransformd::Identity());
@@ -102,7 +100,7 @@ public:
   {
   
     sva::PTransformd X_p_p1 = sva::PTransformd::Identity();     
-    sva::PTransformd X_p_p2 = sva::PTransformd(Eigen::Matrix3d::Identity(),Eigen::Vector3d{0,0,convex_length_[limb]});     
+    sva::PTransformd X_p_p2 = sva::PTransformd(Eigen::Matrix3d::Identity(),Eigen::Vector3d{0,0,-convex_length_[limb]});     
 
     auto p1 = (X_p_p1 * X_0_p).translation();
     auto p2 = (X_p_p2 * X_0_p).translation();
@@ -116,10 +114,6 @@ public:
   {
     return applyTransformation(limb,getOffset(limb) * getPose(limb)); 
   }
-  Eigen::Vector3d getAxis(Limbs limb)
-  {
-    return axis_[limb];
-  }
 
   sva::PTransformd getPose(Limbs limb)
   {
@@ -128,6 +122,15 @@ public:
   sva::PTransformd getOffset(const Limbs limb)
   {
     return limbs_offset_.get(limb);
+  }
+
+  transformation getOffset()
+  {
+    return limbs_offset_;
+  }
+  void setOffset(const transformation & limbs_offsets)
+  {
+    limbs_offset_ = limbs_offsets;
   }
 
   sva::MotionVecd getVel(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity())
@@ -174,6 +177,8 @@ struct RobotPose
 private:
 
     std::map<Limbs, std::string> links_;
+    //offset are made such as : when the arm are alongside the body, all the links frame orientation are matching the world frame,
+    //the link frame position should be at the parent joint 
     transformation links_offsets_;
     std::string robot_name_;
     
@@ -226,6 +231,14 @@ public:
   sva::PTransformd getOffset(const Limbs limb)
   {
     return links_offsets_.get(limb);
+  }
+  transformation getOffset()
+  {
+    return links_offsets_;
+  }
+  void setOffset(const transformation & links_offsets)
+  {
+    links_offsets_ = links_offsets;
   }
 
 };

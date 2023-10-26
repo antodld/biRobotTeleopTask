@@ -176,6 +176,8 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     human_2_point_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)).translation();
     robot_1_point_ = (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation();
 
+    
+
     X_h1_h1p = sva::PTransformd::Identity();
     X_h2_h2p = sva::PTransformd::Identity();
     X_r2_r2p = sva::PTransformd::Identity();
