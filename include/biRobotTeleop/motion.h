@@ -9,6 +9,7 @@
 #include <boost/serialization/map.hpp>
 #include <vector>
 #include <map>
+#include <mc_rtc/gui.h>
 #include "type.h"
 
 namespace biRobotTeleop
@@ -24,36 +25,43 @@ class motion
     {
         name_ = n;
         type_ = t;
-        for (int partInt = Limbs::Head ; partInt != Limbs::RightArm ; partInt++) {
-            Limbs part = static_cast<Limbs>(partInt);
-            motions_[part] = Eigen::Vector6d::Zero();
-        }
     }
     void add(Limbs part, const sva::MotionVecd & motion)
     {
         motions_[part] = motion.vector();
     }
 
-    sva::MotionVecd get(Limbs part)
+    sva::MotionVecd get(Limbs part) const
     {
-        return sva::MotionVecd(motions_[part]);
+        return sva::MotionVecd(motions_.at(part));
     }
 
-    Name name()
+    const Name & name() const noexcept
     {
         return name_;
     }
+    
     void name(Name name)
     {
         name_ = name;
     }
+
     void type(Type t)
     {
         type_ = t;
     }
+
+    size_t size() const noexcept
+    {
+        return motions_.size();
+    }
+
+    // void addToGUI(mc_rtc::gui::StateBuilder & gui,const std::string & name);
+
     private:
 
     std::map<Limbs, Eigen::Vector6d> motions_;
+    
     Name name_;
     Type type_;
     friend class boost::serialization::access;
@@ -63,6 +71,7 @@ class motion
         ar & name_;
         ar & type_;
     }
+
 };
 
 }

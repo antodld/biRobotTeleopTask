@@ -37,6 +37,11 @@ public:
     {
         eval_ = Eigen::Vector6d::Zero();
         speed_ = Eigen::Vector6d::Zero();
+        human_1_pose_ = biRobotTeleop::HumanPose("human_pose_1");
+        human_2_pose_ = biRobotTeleop::HumanPose("human_pose_2");
+        robot_1_pose_links_ = biRobotTeleop::RobotPose();
+        robot_2_pose_links_ = biRobotTeleop::RobotPose();
+        human_pose_links_ = biRobotTeleop::RobotPose();
     }
 
     /*! \brief Load parameters from a Configuration object */
@@ -159,7 +164,7 @@ public:
     /** True if the task is in the solver */
     bool inSolver() const;
 
-    void updateHuman(biRobotTeleop::HumanPose & human_1, biRobotTeleop::HumanPose & human_2)
+    void updateHuman(const biRobotTeleop::HumanPose & human_1, const biRobotTeleop::HumanPose & human_2)
     {
         human_1_pose_.updateHumanState(human_1);
         human_2_pose_.updateHumanState(human_2);

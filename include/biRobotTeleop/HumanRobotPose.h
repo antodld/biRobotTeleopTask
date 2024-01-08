@@ -1,25 +1,26 @@
 #pragma once
 #include <SpaceVecAlg/SpaceVecAlg>
 #include <mc_rtc/Configuration.h>
-// #include <bilateralTeleop_dataType/type.h>
-// #include <bilateralTeleop_dataType/transformation.h>
 #include "type.h"
 #include "transformation.h"
 #include "motion.h"
 #include "boost_serialization_eigen.h"
+#include <mc_rtc/gui.h>
 #include <sch/S_Object/S_Cylinder.h>
 #include <sch/S_Object/S_Sphere.h>
 
 namespace biRobotTeleop
 {
 
-struct HumanPose
+struct HumanPose 
 {
 
 private:
     transformation pose_; //From the world frame to the link frame
     motion vel_; //written in the body frame oriented as the world frame
     motion acc_; //written in the body frame oriented as the world frame
+
+    std::string name_ = "";
 
     //offset are made such as : when the arm are alongside the body, all the links frame orientation are matching the world frame,
     //the link frame position should be at the parent joint 
@@ -38,20 +39,34 @@ private:
         ar & convex_length_;
     }
 
-
 public:
+
+  std::string contact_limbs = "None";
 
   HumanPose()
   {
+    HumanPose("human");
+  }
+
+  HumanPose(std::string name) 
+  {
+    name_ = name;
+    const auto I = sva::PTransformd::Identity();
+    const auto v = sva::MotionVecd::Zero();
     for (int partInt = Limbs::Head ; partInt <= Limbs::RightArm ; partInt++)
     {
       Limbs part = static_cast<Limbs>(partInt);
       convex_length_[part] = 1;
       convex_radius_[part] = 1;
-      limbs_offset_.add(part,sva::PTransformd::Identity());
+      pose_.add(part,I);
+      limbs_offset_.add(part,I);
+      vel_.add(part,v);
+      acc_.add(part,v);
     }
 
   }
+
+  void addDataToGUI(mc_rtc::gui::StateBuilder & gui);
 
   void setCvx(const mc_rtc::Configuration & config)
   {
@@ -96,50 +111,52 @@ public:
 
   }
 
-  sch::S_Cylinder applyTransformation(const Limbs limb,const sva::PTransformd & X_0_p)
+  sch::S_Cylinder applyTransformation(const Limbs limb,const sva::PTransformd & X_0_p) const
   {
   
     sva::PTransformd X_p_p1 = sva::PTransformd::Identity();     
-    sva::PTransformd X_p_p2 = sva::PTransformd(Eigen::Matrix3d::Identity(),Eigen::Vector3d{0,0,-convex_length_[limb]});     
+    sva::PTransformd X_p_p2 = sva::PTransformd(Eigen::Matrix3d::Identity(),Eigen::Vector3d{0,0,-convex_length_.at(limb)});     
 
     auto p1 = (X_p_p1 * X_0_p).translation();
     auto p2 = (X_p_p2 * X_0_p).translation();
-    sch::Scalar r = convex_radius_[limb]; 
+    sch::Scalar r = convex_radius_.at(limb); 
     sch::S_Cylinder cvx_out = sch::S_Cylinder(sch::Point3(p1.x(),p1.y(),p1.z()),sch::Point3(p2.x(),p2.y(),p2.z()),r);
     
     return cvx_out;
   }
 
-  sch::S_Cylinder getConvex(Limbs limb)
+  sch::S_Cylinder getConvex(Limbs limb) const
   {
     return applyTransformation(limb,getOffset(limb) * getPose(limb)); 
   }
 
-  sva::PTransformd getPose(Limbs limb)
+  const sva::PTransformd & getPose(Limbs limb) const
   {
     return pose_.get(limb);
   }
-  sva::PTransformd getOffset(const Limbs limb)
+  
+  const sva::PTransformd getOffset(const Limbs limb) const
   {
     return limbs_offset_.get(limb);
   }
 
-  transformation getOffset()
+  const transformation getOffset() const noexcept
   {
     return limbs_offset_;
   }
+
   void setOffset(const transformation & limbs_offsets)
   {
     limbs_offset_ = limbs_offsets;
   }
 
-  sva::MotionVecd getVel(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity())
+  sva::MotionVecd getVel(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity()) const
   {
     Eigen::Matrix3d R_0_b = getPose(limb).rotation();
     sva::PTransformd X_b_bOff0 = sva::PTransformd(Eigen::Matrix3d::Identity(),R_0_b.transpose() * X_b_bOff.translation());
     return X_b_bOff0 * vel_.get(limb);
   }
-  sva::MotionVecd getAcc(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity())
+  sva::MotionVecd getAcc(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity()) const
   {
     Eigen::Matrix3d R_0_b = getPose(limb).rotation();
     sva::PTransformd X_b_bOff0 = sva::PTransformd(Eigen::Matrix3d::Identity(),R_0_b.transpose() * X_b_bOff.translation());
@@ -159,7 +176,16 @@ public:
     acc_.add(limb,acc);
   }
 
-  void updateHumanState(HumanPose & human)
+  void name(const std::string & n)
+  {
+    name_ = n;
+  }
+  const std::string & name() const noexcept
+  {
+    return name_;
+  }
+
+  void updateHumanState(const HumanPose & human)
   {
     for (int partInt = Limbs::Head ; partInt <= Limbs::RightArm ; partInt++)
     {
@@ -187,11 +213,13 @@ public:
 
   RobotPose()
   {
+    const auto I = sva::PTransformd::Identity();
     for (int partInt = Limbs::Head ; partInt <= Limbs::RightArm ; partInt++)
     {
       Limbs part = static_cast<Limbs>(partInt);
       links_[part] = "";
-      links_offsets_.add(part ,sva::PTransformd::Identity());
+      links_offsets_.add(part,I);
+
     }
   }
 
@@ -223,16 +251,16 @@ public:
     links_offsets_.add(part , offset);
   }
 
-  std::string getName(const Limbs part)
+  std::string getName(const Limbs part) const
   {
-    return links_[part];
+    return links_.at(part);
   }
 
-  sva::PTransformd getOffset(const Limbs limb)
+  sva::PTransformd getOffset(const Limbs limb) const
   {
     return links_offsets_.get(limb);
   }
-  transformation getOffset()
+  transformation getOffset() const
   {
     return links_offsets_;
   }

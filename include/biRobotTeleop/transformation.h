@@ -10,6 +10,7 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>
+#include <mc_rtc/gui.h>
 
 namespace biRobotTeleop
 {
@@ -24,24 +25,21 @@ public:
     {
         name_ = n;
         type_ = t;
-        for (int partInt = Limbs::Head ; partInt != Limbs::RightArm ; partInt++) {
-            Limbs part = static_cast<Limbs>(partInt);
-            transformations_E_[part] = Eigen::Matrix3d::Identity();
-            transformations_T_[part] = Eigen::Vector3d::Zero();
-        }
+
     }
     void add(Limbs part, const sva::PTransformd & transfo)
     {
         transformations_E_[part] = transfo.rotation();
         transformations_T_[part] = transfo.translation();
+        transformations_[part] = sva::PTransformd(transformations_E_[part],transformations_T_[part]);
 
     }
-    sva::PTransformd get(Limbs part)
+    const sva::PTransformd & get(const Limbs part) const 
     {
-        return sva::PTransformd(transformations_E_[part],transformations_T_[part]);
+        return transformations_.at(part);
     }
 
-    Name name()
+    const Name & name() const noexcept
     {
         return name_;
     }
@@ -49,14 +47,22 @@ public:
     {
         name_ = name;
     }
-    Type type()
+    const Type & type() const noexcept
     {
         return type_;
     }
 
+    size_t size() const noexcept
+    {
+        return transformations_E_.size();
+    }
+
+    // void addToGUI(mc_rtc::gui::StateBuilder & gui,const std::string & name);
+
 private:
     std::map<Limbs, Eigen::Matrix3d> transformations_E_;
     std::map<Limbs, Eigen::Vector3d> transformations_T_;
+    std::map<Limbs, sva::PTransformd> transformations_;
     Name name_;
     Type type_;
     friend class boost::serialization::access;
@@ -67,6 +73,7 @@ private:
         ar & name_;
         ar & type_;
     }
+
 };  
 
 }
