@@ -150,12 +150,27 @@ public:
     limbs_offset_ = limbs_offsets;
   }
 
+  /**
+   * @brief Get the velocity at the limb frame oriented as the world frame
+   * 
+   * @param limb 
+   * @param X_b_bOff 
+   * @return sva::MotionVecd  
+   */
   sva::MotionVecd getVel(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity()) const
   {
     Eigen::Matrix3d R_0_b = getPose(limb).rotation();
     sva::PTransformd X_b_bOff0 = sva::PTransformd(Eigen::Matrix3d::Identity(),R_0_b.transpose() * X_b_bOff.translation());
     return X_b_bOff0 * vel_.get(limb);
   }
+
+  /**
+   * @brief Get the acceleration of the limb frame oriented as the world frame
+   * 
+   * @param limb 
+   * @param X_b_bOff 
+   * @return sva::MotionVecd  
+   */
   sva::MotionVecd getAcc(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity()) const
   {
     Eigen::Matrix3d R_0_b = getPose(limb).rotation();
@@ -167,10 +182,26 @@ public:
   {
     pose_.add(limb,p);
   }
+
+  /**
+   * @brief Set the limb velocity
+   * The velocity is expressed at in the frame of the body oriented as the world frame
+   * 
+   * @param limb 
+   * @param vel 
+   */
   void setVel(Limbs limb, const sva::MotionVecd & vel)
   {
     vel_.add(limb,vel);
   }
+
+  /**
+   * @brief Set the limb acceleration
+   * The velocity is expressed at in the frame of the body oriented as the world frame
+   * 
+   * @param limb 
+   * @param vel 
+   */
   void setAcc(Limbs limb, const sva::MotionVecd & acc)
   {
     acc_.add(limb,acc);
