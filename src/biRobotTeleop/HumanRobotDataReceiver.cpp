@@ -31,10 +31,6 @@ void HumanRobotDataReceiver::startConnection()
           run(buff, t_last_received);
           online_ = online_count_ < 1000;
           std::this_thread::sleep_for(std::chrono::microseconds(500));
-          if(robot_thread_.joinable())
-          {
-            robot_thread_.join();
-          }
         }
       });
 #endif
@@ -56,6 +52,7 @@ void HumanRobotDataReceiver::robot(const mc_control::ElementId & id,const mc_con
             if(simulated_delay_ != 0)
             {
                 robot_thread_ = std::thread(&HumanRobotDataReceiver::updateRobot,this,msg);
+                robot_thread_.detach();
             }
             else
             {
