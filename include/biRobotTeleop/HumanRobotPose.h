@@ -203,6 +203,7 @@ struct RobotPose
 private:
 
     std::map<Limbs, std::string> links_;
+    std::map<Limbs, std::string> convex_;
     //offset are made such as : when the arm are alongside the body, all the links frame orientation are matching the world frame,
     //the link frame position should be at the parent joint 
     transformation links_offsets_;
@@ -218,6 +219,7 @@ public:
     {
       Limbs part = static_cast<Limbs>(partInt);
       links_[part] = "";
+      convex_[part] = "";
       links_offsets_.add(part,I);
 
     }
@@ -226,13 +228,13 @@ public:
   void load(const mc_rtc::Configuration & config)
   {
 
-    setName(Limbs::LeftHand,config("left_hand")("name"));
-    setName(Limbs::RightHand,config("right_hand")("name"));
-    setName(Limbs::LeftArm,config("left_arm")("name"));
-    setName(Limbs::RightArm,config("right_arm")("name"));
-    setName(Limbs::LeftForearm,config("left_forearm")("name"));
-    setName(Limbs::RightForearm,config("right_forearm")("name"));
-    setName(Limbs::Pelvis,config("pelvis")("name"));
+    setNameAndConvex(Limbs::LeftHand,config("left_hand"));
+    setNameAndConvex(Limbs::RightHand,config("right_hand"));
+    setNameAndConvex(Limbs::LeftArm,config("left_arm"));
+    setNameAndConvex(Limbs::RightArm,config("right_arm"));
+    setNameAndConvex(Limbs::LeftForearm,config("left_forearm"));
+    setNameAndConvex(Limbs::RightForearm,config("right_forearm"));
+    setNameAndConvex(Limbs::Pelvis,config("pelvis"));
     
     if(config("left_hand").has("offset")){setOffset(Limbs::LeftHand,config("left_hand")("offset"));}
     if(config("right_hand").has("offset")){setOffset(Limbs::RightHand,config("right_hand")("offset"));}
@@ -242,9 +244,17 @@ public:
     if(config("right_forearm").has("offset")){setOffset(Limbs::RightForearm,config("right_forearm")("offset"));}
   }
 
-  void setName(Limbs part,const std::string & name)
+  void setNameAndConvex(Limbs part,const mc_rtc::Configuration & config)
   {
-    links_[part] = name; 
+    config("name",links_[part]); 
+    if(config.has("convex"))
+    {
+      config("convex",convex_[part]); 
+    }
+    else
+    {
+      convex_[part] = links_[part];
+    }
   }
   void setOffset(Limbs part, const sva::PTransformd & offset)
   {
@@ -254,6 +264,11 @@ public:
   std::string getName(const Limbs part) const
   {
     return links_.at(part);
+  }
+
+  std::string getConvexName(const Limbs part) const
+  {
+    return convex_.at(part);
   }
 
   sva::PTransformd getOffset(const Limbs limb) const

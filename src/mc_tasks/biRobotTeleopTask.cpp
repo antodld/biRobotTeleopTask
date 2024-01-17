@@ -122,8 +122,11 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     const std::string robot_2_link_name = robot_2_pose_links_.getName(link_2_);
     const std::string robot_1_link_name = robot_1_pose_links_.getName(link_1_);
 
-    const auto robot_1_cvx = robot_1.convex(robot_1_link_name);
-    const auto robot_2_cvx = robot_2.convex(robot_2_link_name);
+    const std::string robot_2_cvx_name = robot_2_pose_links_.getConvexName(link_2_);
+    const std::string robot_1_cvx_name = robot_1_pose_links_.getConvexName(link_1_);
+
+    const auto robot_1_cvx = robot_1.convex(robot_1_cvx_name);
+    const auto robot_2_cvx = robot_2.convex(robot_2_cvx_name);
     auto human_1_cvx = human_1_pose_.getConvex(link_1_);
     auto human_2_cvx = human_2_pose_.getConvex(link_2_);
 
