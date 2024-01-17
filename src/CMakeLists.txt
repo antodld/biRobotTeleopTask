@@ -1,29 +1,44 @@
 
 #biRobotTeleop
 
-# header-only
-set(utils_HDR_DIR
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/biRobotTeleop>$<INSTALL_INTERFACE:include/biRobotTeleop>)
-
 set(utils_HDR
-  ${utils_HDR_DIR}/motion.h
-  ${utils_HDR_DIR}/transformation.h
-  ${utils_HDR_DIR}/type.h
-  ${utils_HDR_DIR}/HumanRobotPose.h
+  ../include/biRobotTeleop/motion.h
+  ../include/biRobotTeleop/transformation.h
+  ../include/biRobotTeleop/type.h
+  ../include/biRobotTeleop/HumanRobotPose.h
+  ../include/biRobotTeleop/HumanRobotDataReceiver.h
 )
 
-# header-only
-add_library(utils_${PROJECT_NAME} INTERFACE)
-if(COMMAND target_sources)
-  target_sources(utils_${PROJECT_NAME} INTERFACE ${utils_HDR})
-endif()
-add_library(biRobotTeleop_utils ALIAS utils_${PROJECT_NAME})
+set(utils_SRC
+    biRobotTeleop/HumanRobotPose.cpp
+    biRobotTeleop/HumanRobotDataReceiver.cpp
+)
 
-install(TARGETS utils_${PROJECT_NAME} 
+add_library(utils_${PROJECT_NAME} SHARED ${utils_SRC} ${utils_HDR})
+
+target_link_libraries(utils_${PROJECT_NAME}
+                      PUBLIC 
+                      SpaceVecAlg::SpaceVecAlg 
+                      Boost::serialization
+                      mc_rtc::mc_control
+                      mc_rtc::mc_rtc_gui
+                      mc_rtc::mc_control_client
+                      )
+
+set_target_properties(utils_${PROJECT_NAME} PROPERTIES
+  OUTPUT_NAME utils_${PROJECT_NAME}
+  VERSION utils_${PROJECT_NAME}
+  PUBLIC_HEADER "${utils_${PROJECT_NAME}_HDR}")
+
+target_include_directories(utils_${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/biRobotTeleop>"
+  "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")
+
+install(TARGETS utils_${PROJECT_NAME}
   EXPORT "${TARGETS_EXPORT_NAME}"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+
 
 #Tasks
 
@@ -48,7 +63,8 @@ target_link_libraries(Tasks_${PROJECT_NAME}
 set_target_properties(Tasks_${PROJECT_NAME} PROPERTIES
   OUTPUT_NAME Tasks_${PROJECT_NAME}
   VERSION Tasks_${PROJECT_NAME}
-  PUBLIC_HEADER "${Tasks_${PROJECT_NAME}_HDR}")
+  PUBLIC_HEADER "${Tasks_${PROJECT_NAME}_HDR}"
+  )
 
 target_include_directories(Tasks_${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/Tasks>"
   "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")

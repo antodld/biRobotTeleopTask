@@ -25,5 +25,6 @@ add_project_dependency(Boost REQUIRED COMPONENTS filesystem timer ${BOOST_STACKT
 
 
 find_package(SpaceVecAlg REQUIRED)
+find_package(mc_rtc REQUIRED)
 
 add_subdirectory(src)
