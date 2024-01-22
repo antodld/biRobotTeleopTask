@@ -16,11 +16,15 @@ void HumanPose::addDataToGUI(mc_rtc::gui::StateBuilder & gui)
             gui.addElement( {"BiRobotTeleop","Human Pose",name_,"Transforms"},
                             mc_rtc::gui::Transform(
                                 limb2Str(limb),
-                                [this,limb] () -> const sva::PTransformd & {return getPose(limb);} )
+                                [this,limb] () -> const sva::PTransformd 
+                                {
+                                    return getOffset(limb) * getPose(limb);
+                                } )
                         );
         }
     }
 }
+
 
 
 }

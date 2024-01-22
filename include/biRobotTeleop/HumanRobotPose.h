@@ -16,13 +16,14 @@ struct HumanPose
 {
 
 private:
-    transformation pose_; //From the world frame to the link frame
+    transformation pose_; //From the world frame to the link frame (offset is not included in this data)
     motion vel_; //written in the body frame oriented as the world frame
     motion acc_; //written in the body frame oriented as the world frame
 
     std::string name_ = "";
 
-    //offset are made such as : when the arm are alongside the body, all the links frame orientation are matching the world frame,
+    //transformation between the body Frame to an offsetted link body frame such as
+    //when the arm are alongside the body, all the links frame orientation are matching the world frame,
     //the link frame position should be at the parent joint 
     transformation limbs_offset_; 
     std::map<Limbs, double> convex_radius_;
@@ -47,7 +48,7 @@ public:
   {
     HumanPose("human");
   }
-
+  
   HumanPose(std::string name) 
   {
     name_ = name;
@@ -109,6 +110,9 @@ public:
     offset = config("hand")("offset")("right");
     limbs_offset_.add(RightHand,offset);
 
+    offset = config("pelvis")("offset");
+    limbs_offset_.add(Pelvis,offset);
+
   }
 
   sch::S_Cylinder applyTransformation(const Limbs limb,const sva::PTransformd & X_0_p) const
@@ -135,7 +139,7 @@ public:
     return pose_.get(limb);
   }
   
-  const sva::PTransformd getOffset(const Limbs limb) const
+  const sva::PTransformd & getOffset(const Limbs limb) const
   {
     return limbs_offset_.get(limb);
   }
@@ -235,7 +239,9 @@ private:
 
     std::map<Limbs, std::string> links_;
     std::map<Limbs, std::string> convex_;
-    //offset are made such as : when the arm are alongside the body, all the links frame orientation are matching the world frame,
+    
+    //transformation between the body Frame to an offsetted link body frame such as
+    //when the arm are alongside the body, all the links frame orientation are matching the world frame,
     //the link frame position should be at the parent joint 
     transformation links_offsets_;
     std::string robot_name_;
@@ -286,6 +292,10 @@ public:
     {
       convex_[part] = links_[part];
     }
+  }
+  void setName(Limbs part, const  std::string & name)
+  {
+    links_[part] = name;
   }
   void setOffset(Limbs part, const sva::PTransformd & offset)
   {

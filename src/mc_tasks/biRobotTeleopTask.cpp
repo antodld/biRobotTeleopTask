@@ -46,9 +46,12 @@ void biRobotTeleopTask::load(mc_solver::QPSolver & solver, const mc_rtc::Configu
   if(config.has("stiffness")) { this->stiffness(config("stiffness")); }
   if(config.has("weight")) { this->weight(config("weight")); }
   if(config.has("name")) { this->name(config("name")); }
+  if(config.has("human"))
+  {
+    human_1_pose_.setCvx(config("human")("convex"));
+    human_2_pose_.setCvx(config("human")("convex"));
+  }
 
-  human_1_pose_.setCvx(config("human")("convex"));
-  human_2_pose_.setCvx(config("human")("convex"));
 
   if (config.has("robot_1"))
   {
@@ -255,8 +258,10 @@ void biRobotTeleopTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
 
   gui.addElement({"Tasks", name_, "Details"},
                  mc_rtc::gui::Label("robot 1 : ",[this]() {return robots_.robot(r1Index_).name();}),
+                 mc_rtc::gui::Label("link 1 : ",[this]() {return biRobotTeleop::limb2Str(link_1_) ;}),
                  
-                 mc_rtc::gui::Label("robot 2 : ",[this]() {return robots_.robot(r2Index_).name();})
+                 mc_rtc::gui::Label("robot 2 : ",[this]() {return robots_.robot(r2Index_).name();}),
+                 mc_rtc::gui::Label("link 2 : ",[this]() {return biRobotTeleop::limb2Str(link_2_) ;})
                  );
 
   if(main_indx_ == 0)

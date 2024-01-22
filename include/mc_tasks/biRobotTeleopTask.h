@@ -170,6 +170,12 @@ public:
         human_2_pose_.updateHumanState(human_2);
     }
 
+    void updateHumanConfig(const mc_rtc::Configuration & human_1, const mc_rtc::Configuration & human_2)
+    {
+        human_1_pose_.setCvx(human_1);
+        human_2_pose_.setCvx(human_2);
+    }
+
     std::vector<biRobotTeleop::HumanPose> getHumanPose()
     {
         return {human_1_pose_,human_2_pose_};
