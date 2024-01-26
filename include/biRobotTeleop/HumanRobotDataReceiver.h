@@ -66,7 +66,7 @@ public:
         
     }
 
-    void init(const std::string human_name, const std::string robot_name ,const std::string & pub, const std::string rec);
+    void init(const std::string human_name, const std::string robot_name ,const std::string & pub, const std::string & rec);
 
     void subsbscribe(const std::string & sub_name, const mc_rtc::gui::Elements type,const std::vector<std::string> & category, const std::string & name)
     {
@@ -99,14 +99,16 @@ public:
         }
     }
 
-    const HumanPose & getHumanPose() const noexcept
+    const HumanPose & getHumanPose()
     {
+        std::lock_guard<std::mutex> lk_copy_state(mutex_copy_);
         return h_;
     }
 
     const mc_rbdyn::Robot & getRobot()
     {
-        std::lock_guard<std::mutex> lk_copy_state(mutex_robot_);
+        std::lock_guard<std::mutex> lk_copy_state_delay(mutex_robot_);
+        std::lock_guard<std::mutex> lk_copy_state(mutex_copy_);
         return robots_->robot(0);
     } 
     
@@ -171,11 +173,16 @@ private:
 
     void array_input(const mc_control::ElementId & ,
                             const std::vector<std::string> & /*labels*/,
-                            const Eigen::VectorXd & /*data*/) override {}
+                            const Eigen::VectorXd & /*data*/) override;
 
     void number_slider(const mc_control::ElementId & , double /*data*/, double /*min*/, double /*max*/) override {}
 
-    void robot(const mc_control::ElementId & id, const mc_control::RobotMsg & msg) override;
+    void robot(const mc_control::ElementId & id,
+                     const std::vector<std::string> & /*parameters*/,
+                     const std::vector<std::vector<double>> & /*q*/,
+                     const sva::PTransformd & /*posW*/) override {}
+
+    void robot_msg(const mc_control::ElementId & id, const mc_control::RobotMsg & msg) override;
 
     void schema(const mc_control::ElementId & , const std::string & /*schema*/) override {}
 
@@ -201,12 +208,16 @@ private:
                             const std::vector<Eigen::Vector3d> & /* points */,
                             const mc_rtc::gui::LineConfig & /* config */) override {}
     
-    void updateRobot(const mc_control::RobotMsg & msg);
+
+    void updateRobot(mc_rbdyn::Robot & robot, const mc_control::RobotMsg & msg);
+
+    void updateRobot(mc_rbdyn::Robot & robot_target, const mc_rbdyn::Robot & robot_data);
 
     std::string human_name_;
     std::string robot_name_;
     HumanPose h_;
-    
+    HumanPose h_thread_;
+
     std::map<std::string,std::any> subscribed_data_;
     std::map<std::string,SubscridedbId> subscribed_id_;
     
@@ -216,6 +227,7 @@ private:
 
     double simulated_delay_ = 0.1;
     std::mutex mutex_robot_;
+    std::mutex mutex_copy_;
     std::thread robot_thread_;
 
 

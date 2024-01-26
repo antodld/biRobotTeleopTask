@@ -25,6 +25,35 @@ void HumanPose::addDataToGUI(mc_rtc::gui::StateBuilder & gui)
     }
 }
 
+void HumanPose::addOffsetToGUI(mc_rtc::gui::StateBuilder & gui)
+{
+    for (int i = 0 ; i <= Limbs::RightArm;i++)
+    {
+        const auto limb = static_cast<Limbs>(i);
+        gui.addElement(this, {"BiRobotTeleop","Human Pose", name_,"Offsets",limb2Str(limb)},
+
+                    mc_rtc::gui::ArrayInput(
+                        "translation [m]", {"x", "y", "z"},
+                        [this,limb]() -> const Eigen::Vector3d & { return getOffset(limb).translation(); },
+                        [this,limb](const Eigen::Vector3d & t) {
+                            auto offset = getOffset(limb); 
+                            offset.translation() = t;
+                            setOffset(limb,offset);
+                            }),
+                    mc_rtc::gui::ArrayInput(
+                        "rotation [deg]", {"r", "p", "y"},
+                        [this,limb]() -> Eigen::Vector3d {
+                        return mc_rbdyn::rpyFromMat(getOffset(limb).rotation()) * 180. / mc_rtc::constants::PI;
+                        },
+                        [this,limb](const Eigen::Vector3d & rpy) {
+                            auto offset = getOffset(limb); 
+                            offset.rotation() = mc_rbdyn::rpyToMat(rpy * mc_rtc::constants::PI / 180.);
+                            setOffset(limb,offset);
+                        })
+                        );
+    }
+}
+
 
 
 }

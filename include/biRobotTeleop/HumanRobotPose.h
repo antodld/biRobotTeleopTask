@@ -69,6 +69,8 @@ public:
 
   void addDataToGUI(mc_rtc::gui::StateBuilder & gui);
 
+  void addOffsetToGUI(mc_rtc::gui::StateBuilder & gui);
+
   void setCvx(const mc_rtc::Configuration & config)
   {
     double length = config("arm")("length");
@@ -152,6 +154,11 @@ public:
   void setOffset(const transformation & limbs_offsets)
   {
     limbs_offset_ = limbs_offsets;
+  }
+
+  void setOffset(Limbs limb, const sva::PTransformd & off)
+  {
+    limbs_offset_.add(limb,off);
   }
 
   /**
