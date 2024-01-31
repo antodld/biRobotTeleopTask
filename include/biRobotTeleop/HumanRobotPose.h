@@ -12,6 +12,16 @@
 namespace biRobotTeleop
 {
 
+/**
+ * @brief Place holder for the human pose and motion datas.
+ * The velocity and acceleration datas should be expressed in a body frame oriented as the world frame
+ * The position data are stored as their raw value.
+ * 
+ * Offsets are included to account for a unified frame system
+ * It is set such as when the human is standing straight with its arms alongside its body,
+ * the frame are all oriented similarly as the world frame
+ * 
+ */
 struct HumanPose 
 {
 
@@ -146,7 +156,7 @@ public:
     return limbs_offset_.get(limb);
   }
 
-  const transformation getOffset() const noexcept
+  const transformation & getOffset() const noexcept
   {
     return limbs_offset_;
   }
@@ -189,6 +199,12 @@ public:
     return X_b_bOff0 * acc_.get(limb);
   }
 
+  /**
+   * @brief Update the human pose on one limb, this data should not necesserly be in the unified frame, if so the corresponding offset should be identity
+   * 
+   * @param limb 
+   * @param p 
+   */
   void setPose(const Limbs limb, const sva::PTransformd & p)
   {
     pose_.add(limb,p);
@@ -240,6 +256,12 @@ public:
 
 };
 
+
+/**
+ * @brief RobotPose allows to generically maps a limb to a robot body.
+ * It also includes offset such as this body frame can be expressed in the unified frame
+ * 
+ */
 struct RobotPose
 {
 private:

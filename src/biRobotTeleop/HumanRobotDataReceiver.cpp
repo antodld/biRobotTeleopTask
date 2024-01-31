@@ -43,7 +43,7 @@ void HumanRobotDataReceiver::startConnection()
 #endif
 }
 
-void HumanRobotDataReceiver::robot_msg(const mc_control::ElementId & id,const mc_control::RobotMsg & msg)
+void HumanRobotDataReceiver::robot_msg(const mc_control::ElementId & id,const mc_rtc::gui::RobotMsgData & msg)
 {
     if(id.category[0] == "Robots")
     {
@@ -165,7 +165,7 @@ void HumanRobotDataReceiver::array_label(const mc_control::ElementId & id, const
     }
 }
 
-void HumanRobotDataReceiver::updateRobot(mc_rbdyn::Robot & robot,const mc_control::RobotMsg & msg)
+void HumanRobotDataReceiver::updateRobot(mc_rbdyn::Robot & robot,const mc_rtc::gui::RobotMsgData & msg)
 {
     const int dur = static_cast<int>(simulated_delay_ * 1e3);
     std::this_thread::sleep_for(std::chrono::milliseconds(dur));

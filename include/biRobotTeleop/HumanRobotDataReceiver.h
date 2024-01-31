@@ -6,6 +6,7 @@
 #include <mc_rbdyn/RobotLoader.h>
 #include <mc_rbdyn/Robots.h>
 #include <mc_rtc/gui/elements.h>
+#include <mc_rtc/gui/RobotMsg.h>
 #include <any>
 #include <mutex>
 #include <thread>
@@ -47,7 +48,7 @@ bool checkDataType(const SubscridedbId & sub_id)
     case Elements::Checkbox :
         return typeid(T) == typeid(bool);
     case Elements::Robot :
-        return typeid(T) == typeid(mc_control::RobotMsg);
+        return typeid(T) == typeid(mc_rtc::gui::RobotMsgData);
     default:
         return true;
     }
@@ -182,7 +183,7 @@ private:
                      const std::vector<std::vector<double>> & /*q*/,
                      const sva::PTransformd & /*posW*/) override {}
 
-    void robot_msg(const mc_control::ElementId & id, const mc_control::RobotMsg & msg) override;
+    void robot_msg(const mc_control::ElementId & id, const mc_rtc::gui::RobotMsgData & msg) override;
 
     void schema(const mc_control::ElementId & , const std::string & /*schema*/) override {}
 
@@ -209,7 +210,7 @@ private:
                             const mc_rtc::gui::LineConfig & /* config */) override {}
     
 
-    void updateRobot(mc_rbdyn::Robot & robot, const mc_control::RobotMsg & msg);
+    void updateRobot(mc_rbdyn::Robot & robot, const mc_rtc::gui::RobotMsgData & msg);
 
     void updateRobot(mc_rbdyn::Robot & robot_target, const mc_rbdyn::Robot & robot_data);
 
