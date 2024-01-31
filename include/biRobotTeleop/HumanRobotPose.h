@@ -38,6 +38,7 @@ private:
     transformation limbs_offset_; 
     std::map<Limbs, double> convex_radius_;
     std::map<Limbs, double> convex_length_;
+    std::map<Limbs, bool> data_online_; //By default at false, can be used to set if a data has not been updated for a long time
     
     friend class boost::serialization::access;
     template <class Archive>
@@ -69,6 +70,7 @@ public:
       Limbs part = static_cast<Limbs>(partInt);
       convex_length_[part] = 1;
       convex_radius_[part] = 1;
+      data_online_[part] = false;
       pose_.add(part,I);
       limbs_offset_.add(part,I);
       vel_.add(part,v);
@@ -80,6 +82,16 @@ public:
   void addDataToGUI(mc_rtc::gui::StateBuilder & gui);
 
   void addOffsetToGUI(mc_rtc::gui::StateBuilder & gui);
+
+  bool limbActive(const Limbs limb) const
+  {
+    return data_online_.at(limb);
+  }
+
+  bool setLimbActiveState(const Limbs limb, const bool state) noexcept
+  {
+    data_online_[limb] = state;
+  }
 
   void setCvx(const mc_rtc::Configuration & config)
   {
