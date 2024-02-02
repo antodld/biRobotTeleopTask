@@ -29,10 +29,7 @@ public:
     }
     void add(Limbs part, const sva::PTransformd & transfo)
     {
-        transformations_E_[part] = transfo.rotation();
-        transformations_T_[part] = transfo.translation();
-        transformations_[part] = sva::PTransformd(transformations_E_[part],transformations_T_[part]);
-
+        transformations_[part] = transfo;
     }
     const sva::PTransformd & get(const Limbs part) const 
     {
@@ -54,20 +51,26 @@ public:
 
     size_t size() const noexcept
     {
-        return transformations_E_.size();
+        return transformations_.size();
     }
 
     // void addToGUI(mc_rtc::gui::StateBuilder & gui,const std::string & name);
 
 private:
+
+    std::map<Limbs, sva::PTransformd> transformations_;
     std::map<Limbs, Eigen::Matrix3d> transformations_E_;
     std::map<Limbs, Eigen::Vector3d> transformations_T_;
-    std::map<Limbs, sva::PTransformd> transformations_;
     Name name_;
     Type type_;
     friend class boost::serialization::access;
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
+        for (auto & transfo : transformations_)
+        {
+            transformations_E_[transfo.first] = transfo.second.rotation();
+            transformations_T_[transfo.first] = transfo.second.translation();
+        }
         ar & transformations_E_;
         ar & transformations_T_;
         ar & name_;

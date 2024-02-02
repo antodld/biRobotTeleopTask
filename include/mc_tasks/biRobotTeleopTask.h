@@ -270,23 +270,19 @@ private:
 
     return m;
     }
-    void get_q_dq(Eigen::VectorXd & q, Eigen::VectorXd & dq ,const mc_rbdyn::Robot & robot ,const rbd::Jacobian & jac)
+
+
+    Eigen::VectorXd param2VecLocal(const std::vector<std::vector<double>> & param,const mc_rbdyn::Robot & robot ,const rbd::Jacobian & jac)
     {
-        std::vector<double> dot_q_vec = {};
-        std::vector<double> q_vec = {};
+        std::vector<double> vec = {};
         for (auto & indx : jac.jointsPath())
         {
-        for (auto & qd : robot.mbc().alpha[indx])
-        {
-            dot_q_vec.push_back(qd);
-        }  
-        for (auto & q : robot.mbc().q[indx])
-        {
-            q_vec.push_back(q);
-        }  
+            for (auto & p : robot.mbc().alpha[indx])
+            {
+                vec.push_back(p);
+            }    
         }
-        dq = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(dot_q_vec.data(), dot_q_vec.size());
-        q = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(q_vec.data(), q_vec.size());
+        return Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(vec.data(), vec.size());
     }
 
     /**
@@ -312,7 +308,7 @@ private:
     {
         const sva::MotionVecd v_l_l = robot.bodyVelB(link);
         const sva::PTransformd X_0_l = robot.bodyPosW(link);
-        const sva::PTransformd X_l_t = sva::PTransformd(Eigen::Matrix3d::Identity(),off);
+        const sva::PTransformd X_l_t = sva::PTransformd(off);
         return (sva::PTransformd(X_0_l.rotation().transpose(),Eigen::Vector3d::Zero()) * X_l_t) * v_l_l;
     }
 

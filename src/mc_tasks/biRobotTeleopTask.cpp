@@ -216,14 +216,8 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
     robot_2_jac.fullJacobian(robot_2.mb(),shortJ2,J2); 
     const auto dotJ2 = robot_2_jac.jacobianDot(robot_2.mb(),robot_2.mbc());
 
-
-    Eigen::VectorXd dot_q2;
-    Eigen::VectorXd q2;
-    Eigen::VectorXd dot_q1;
-    Eigen::VectorXd q1;
-    get_q_dq(q2,dot_q2,robot_2,robot_2_jac);
-    get_q_dq(q1,dot_q1,robot_1,robot_1_jac);
-
+    auto dot_q1 = param2VecLocal(robot_1.alpha(),robot_1,robot_1_jac);
+    auto dot_q2 = param2VecLocal(robot_2.alpha(),robot_2,robot_2_jac);
 
     task_.setJacobians(J1,J2);
 
