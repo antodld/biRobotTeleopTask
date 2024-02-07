@@ -95,8 +95,11 @@ void biRobotTeleopTask::loadRobotConf(mc_solver::QPSolver & solver, const int rI
   {
     selectUnactiveJoints(solver,rIndex,config("unactive_joints"));
   }
-  if(rIndex == r1Index_){robot_1_pose_links_.load(config("limb_map"));}
-  else if (rIndex == r2Index_){robot_2_pose_links_.load(config("limb_map"));}
+  if(config.has("limb_map"))
+  {
+    if(rIndex == r1Index_){robot_1_pose_links_.load(config("limb_map"));}
+    else if (rIndex == r2Index_){robot_2_pose_links_.load(config("limb_map"));}
+  }
 
 }
 
@@ -277,6 +280,13 @@ void biRobotTeleopTask::addToGUI(mc_rtc::gui::StateBuilder & gui)
                                                                               [this] (){return  robot_1_point_ ; }));    
   }
 
+  gui.addElement({"Tasks",name_,"Robot pose"},
+                mc_rtc::gui::Transform("Robot 1: " + biRobotTeleop::limb2Str(link_1_),[this]()
+                                        {return robot_1_pose_links_.getOffset(link_1_) * robots_.robot(r1Index_).bodyPosW(getLinkName(r1Index_,link_1_)); }),
+                mc_rtc::gui::Transform("Robot 2: " + biRobotTeleop::limb2Str(link_2_),[this]()
+                                        {return robot_2_pose_links_.getOffset(link_2_) * robots_.robot(r2Index_).bodyPosW(getLinkName(r2Index_,link_2_)); })                
+                );
+
 }
 
 void biRobotTeleopTask::removeFromGUI(mc_rtc::gui::StateBuilder & gui)
@@ -301,8 +311,8 @@ void biRobotTeleopTask::selectActiveJoints(mc_solver::QPSolver & solver,
   }
   selectUnactiveJoints(solver, rIndex ,unactiveJoints);
 }
-void biRobotTeleopTask::selectActiveJoints(mc_solver::QPSolver & solver,
-                                     const std::vector<std::string> & activeJointsName,
+void biRobotTeleopTask::selectActiveJoints(mc_solver::QPSolver & ,
+                                     const std::vector<std::string> & ,
                                      const std::map<std::string, std::vector<std::array<int, 2>>> &)
 {
 
@@ -323,7 +333,7 @@ void biRobotTeleopTask::selectUnactiveJoints(mc_solver::QPSolver &,
 
 }
 void biRobotTeleopTask::selectUnactiveJoints(mc_solver::QPSolver &,
-                                       const std::vector<std::string> & unactiveJointsName,
+                                       const std::vector<std::string> & ,
                                        const std::map<std::string, std::vector<std::array<int, 2>>> &)
 {
 
@@ -336,7 +346,7 @@ void biRobotTeleopTask::resetJointsSelector(mc_solver::QPSolver & solver,const i
   selectUnactiveJoints(solver, rIndex ,{});
 }
 
-void biRobotTeleopTask::resetJointsSelector(mc_solver::QPSolver & solver)
+void biRobotTeleopTask::resetJointsSelector(mc_solver::QPSolver & )
 {
 
 

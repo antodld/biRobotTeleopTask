@@ -28,12 +28,12 @@ class motion
     }
     void add(Limbs part, const sva::MotionVecd & motion)
     {
-        motions_[part] = motion.vector();
+        motions_[part] = motion;
     }
 
-    sva::MotionVecd get(Limbs part) const
+    const sva::MotionVecd & get(Limbs part) const
     {
-        return sva::MotionVecd(motions_.at(part));
+        return motions_.at(part);
     }
 
     const Name & name() const noexcept
@@ -51,7 +51,7 @@ class motion
         type_ = t;
     }
 
-    size_t size() const noexcept
+    const size_t size() const noexcept
     {
         return motions_.size();
     }
@@ -60,14 +60,20 @@ class motion
 
     private:
 
-    std::map<Limbs, Eigen::Vector6d> motions_;
+    std::map<Limbs, sva::MotionVecd> motions_;
+
+    std::map<Limbs, Eigen::Vector6d> motionsAsVector_;
     
     Name name_;
     Type type_;
     friend class boost::serialization::access;
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
-        ar & motions_;
+        for(auto & m : motions_)
+        {
+            motionsAsVector_[m.first] = m.second.vector();
+        }
+        ar & motionsAsVector_;
         ar & name_;
         ar & type_;
     }

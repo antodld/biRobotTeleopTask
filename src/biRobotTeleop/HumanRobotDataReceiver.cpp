@@ -15,7 +15,7 @@ void HumanRobotDataReceiver::init(const std::string human_name, const std::strin
     robots_->load("initial",*mc_rbdyn::RobotLoader().get_robot_module({"JVRC1"}));
     robots_->load("initial_thread",*mc_rbdyn::RobotLoader().get_robot_module({"JVRC1"}));
     connect(rec,pub);
-    startConnection();
+    // startConnection();
 }
 
 void HumanRobotDataReceiver::startConnection()
@@ -30,42 +30,61 @@ void HumanRobotDataReceiver::startConnection()
         while(run_)
         {
           online_count_ +=1;
-          run(buff, t_last_received);
-          online_ = online_count_ < 1000;
           {
             std::lock_guard<std::mutex> lk_copy_state(mutex_copy_);
-            h_.updateHumanState(h_thread_);
-            updateRobot(robots_->robot(0),robots_->robot(1));
+            run(buff, t_last_received);
           }
-          std::this_thread::sleep_for(std::chrono::microseconds(500));
+          online_ = online_count_ < 1000;
+          std::this_thread::sleep_for(std::chrono::microseconds(1000));
         }
       });
 #endif
 }
 
+void HumanRobotDataReceiver::runAndUpdate()
+{
+
+    std::vector<char> buff(65536);
+    auto t_last_received = std::chrono::system_clock::now();
+
+    online_count_ +=1;
+    
+    run(buff, t_last_received);
+    h_.updateHumanState(h_thread_);
+    if(robots_->hasRobot(robot_name_))
+    {
+        std::lock_guard<std::mutex> lk_copy_state_delay(mutex_robot_);
+        updateRobot(robots_->robot(robot_name_),robots_->robot(robot_name_ + "_thread"));
+    }
+    
+    online_ = online_count_ < 1000;
+
+    
+}
+
 void HumanRobotDataReceiver::robot_msg(const mc_control::ElementId & id,const mc_rtc::gui::RobotMsgData & msg)
 {
-    if(id.category[0] == "Robots")
+    if(id.category[0] == "BiRobotTeleop")
     {
         if(id.name == robot_name_)
         {
-            if(robots_->robot(0).name() != robot_name_)
+            if(!robots_->hasRobot(robot_name_) && !robots_->hasRobot(robot_name_ + "_thread"))
             {
                 std::cout << "update robot name " << std::endl;
                 robots_->load( robot_name_,*mc_rbdyn::RobotLoader().get_robot_module(msg.parameters) );
                 robots_->load( robot_name_ + "_thread",*mc_rbdyn::RobotLoader().get_robot_module(msg.parameters) );
-                robots_->removeRobot(0);
-                robots_->removeRobot(1);
+                robots_->removeRobot(robots_->robotIndex("initial") );
+                robots_->removeRobot(robots_->robotIndex("initial_thread") );
 
             }
             if(simulated_delay_ != 0)
             {
-                robot_thread_ = std::thread([this,msg](){updateRobot(robots_->robot(1),msg);});
+                robot_thread_ = std::thread([this,msg](){updateRobot(robots_->robot(robot_name_ + "_thread"),msg);});
                 robot_thread_.detach();
             }
             else
             {
-                updateRobot(robots_->robot(1),msg);
+                updateRobot(robots_->robot(robot_name_ + "_thread"),msg);
             }
         }   
     }
@@ -173,6 +192,7 @@ void HumanRobotDataReceiver::updateRobot(mc_rbdyn::Robot & robot,const mc_rtc::g
     std::lock_guard<std::mutex> lk_copy_state(mutex_robot_);
     robot.mbc().q = rbd::vectorToParam(robot.mb(),msg.q);
     robot.mbc().alpha = rbd::vectorToParam(robot.mb(),msg.alpha);
+    robot.mbc().alphaD = rbd::vectorToParam(robot.mb(),msg.alphaD);
     robot.posW(msg.posW);
     }
 }
@@ -181,6 +201,7 @@ void HumanRobotDataReceiver::updateRobot(mc_rbdyn::Robot & robot_target,const mc
 {
     robot_target.mbc().q = robot_data.mbc().q;
     robot_target.mbc().alpha = robot_data.mbc().alpha;
+    robot_target.mbc().alphaD = robot_data.mbc().alphaD;
     robot_target.posW(robot_data.posW());
 }
 

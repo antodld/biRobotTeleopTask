@@ -81,6 +81,13 @@ public:
 
   void addDataToGUI(mc_rtc::gui::StateBuilder & gui);
 
+  /**
+   * @brief Only add human position value to gui with offsets
+   * 
+   * @param gui 
+   */
+  void addPoseToGUI(mc_rtc::gui::StateBuilder & gui);
+
   void addOffsetToGUI(mc_rtc::gui::StateBuilder & gui);
 
   bool limbActive(const Limbs limb) const
@@ -88,7 +95,7 @@ public:
     return data_online_.at(limb);
   }
 
-  bool setLimbActiveState(const Limbs limb, const bool state) noexcept
+  void setLimbActiveState(const Limbs limb, const bool state) noexcept
   {
     data_online_[limb] = state;
   }
@@ -184,31 +191,44 @@ public:
   }
 
   /**
-   * @brief Get the velocity at the limb frame oriented as the world frame
+   * @brief Get the velocity at the limb, velocity is expressed at the limb oriented as the world frame
    * 
    * @param limb 
    * @param X_b_bOff 
-   * @return sva::MotionVecd  
+   * @return sva::MotionVecd 
    */
-  sva::MotionVecd getVel(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity()) const
+  sva::MotionVecd getVel(Limbs limb, const sva::PTransformd & X_b_bOff) const
   {
-    Eigen::Matrix3d R_0_b = getPose(limb).rotation();
+    const Eigen::Matrix3d & R_0_b = (getOffset(limb) * getPose(limb)).rotation();
     sva::PTransformd X_b_bOff0 = sva::PTransformd(Eigen::Matrix3d::Identity(),R_0_b.transpose() * X_b_bOff.translation());
     return X_b_bOff0 * vel_.get(limb);
   }
 
   /**
-   * @brief Get the acceleration of the limb frame oriented as the world frame
+   * @brief Get the velocity at the limb, velocity is expressed at the limb oriented as the world frame
    * 
    * @param limb 
-   * @param X_b_bOff 
    * @return sva::MotionVecd  
    */
-  sva::MotionVecd getAcc(Limbs limb, sva::PTransformd X_b_bOff = sva::PTransformd::Identity()) const
+  const sva::MotionVecd & getVel(Limbs limb) const
   {
-    Eigen::Matrix3d R_0_b = getPose(limb).rotation();
-    sva::PTransformd X_b_bOff0 = sva::PTransformd(Eigen::Matrix3d::Identity(),R_0_b.transpose() * X_b_bOff.translation());
+    return vel_.get(limb);
+  }
+
+  sva::MotionVecd getAcc(Limbs limb,const sva::PTransformd & X_b_bOff) const
+  {
+    const Eigen::Matrix3d & R_0_b = (getOffset(limb) * getPose(limb)).rotation();
+    const sva::PTransformd X_b_bOff0 = sva::PTransformd(Eigen::Matrix3d::Identity(),R_0_b.transpose() * X_b_bOff.translation());
     return X_b_bOff0 * acc_.get(limb);
+  }
+
+  /**
+   * @brief Get the accel at the limb, accel is expressed at the limb oriented as the world frame
+   * 
+   */
+  const sva::MotionVecd & getAcc(Limbs limb) const
+  {
+    return acc_.get(limb);
   }
 
   /**
@@ -278,16 +298,34 @@ struct RobotPose
 {
 private:
 
-    std::map<Limbs, std::string> links_;
-    std::map<Limbs, std::string> convex_;
-    
-    //transformation between the body Frame to an offsetted link body frame such as
-    //when the arm are alongside the body, all the links frame orientation are matching the world frame,
-    //the link frame position should be at the parent joint 
-    transformation links_offsets_;
-    std::string robot_name_;
-    
+  std::map<Limbs, std::string> links_;
+  std::map<Limbs, std::string> convex_;
+  
+  //transformation between the body Frame to an offsetted link body frame such as
+  //when the arm are alongside the body, all the links frame orientation are matching the world frame,
+  //the link frame position should be at the parent joint 
+  transformation links_offsets_;
+  std::string robot_name_;
 
+  void setLinksMap(const std::map<Limbs, std::string> & links_map)
+  {
+    links_ = links_map;
+  }
+  void setConvexMap(const std::map<Limbs, std::string> & convex)
+  {
+    convex_ = convex;
+  }
+
+  void setOffset(const transformation & links_offsets)
+  {
+    links_offsets_ = links_offsets;
+  }
+
+  void robotName(const std::string & name)
+  {
+    robot_name_ = name;
+  }
+    
 public:
 
   RobotPose()
@@ -322,6 +360,14 @@ public:
     if(config("right_forearm").has("offset")){setOffset(Limbs::RightForearm,config("right_forearm")("offset"));}
   }
 
+  void load(const RobotPose & pose)
+  {
+    setLinksMap(pose.getLinksMap());
+    setConvexMap(pose.getConvexesMap());
+    setOffset(pose.getOffset());
+    robotName(pose.robotName());
+  }
+
   void setNameAndConvex(Limbs part,const mc_rtc::Configuration & config)
   {
     config("name",links_[part]); 
@@ -343,6 +389,11 @@ public:
     links_offsets_.add(part , offset);
   }
 
+  const std::string & robotName() const noexcept
+  {
+    return robot_name_;
+  }
+
   std::string getName(const Limbs part) const
   {
     return links_.at(part);
@@ -357,13 +408,17 @@ public:
   {
     return links_offsets_.get(limb);
   }
-  transformation getOffset() const
+  const transformation getOffset() const noexcept
   {
     return links_offsets_;
   }
-  void setOffset(const transformation & links_offsets)
+  const std::map<Limbs, std::string> & getLinksMap() const noexcept
   {
-    links_offsets_ = links_offsets;
+    return links_;
+  }
+  const std::map<Limbs, std::string> & getConvexesMap() const noexcept
+  {
+    return convex_;
   }
 
 };

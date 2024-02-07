@@ -100,16 +100,13 @@ public:
         }
     }
 
-    const HumanPose & getHumanPose()
+    const HumanPose & getHumanPose() const noexcept
     {
-        std::lock_guard<std::mutex> lk_copy_state(mutex_copy_);
         return h_;
     }
 
-    const mc_rbdyn::Robot & getRobot()
+    const mc_rbdyn::Robot & getRobot() const noexcept
     {
-        std::lock_guard<std::mutex> lk_copy_state_delay(mutex_robot_);
-        std::lock_guard<std::mutex> lk_copy_state(mutex_copy_);
         return robots_->robot(0);
     } 
     
@@ -129,6 +126,19 @@ public:
     {
         simulated_delay_ = d;
     }
+
+    void update()
+    {
+        std::lock_guard<std::mutex> lk_copy_state(mutex_copy_);
+        h_.updateHumanState(h_thread_);
+        if(robots_->hasRobot(robot_name_))
+        {
+            std::lock_guard<std::mutex> lk_copy_state_delay(mutex_robot_);
+            updateRobot(robots_->robot(robot_name_),robots_->robot(robot_name_ + "_thread"));
+        }
+    }
+
+    void runAndUpdate();
 
 
 private:
@@ -178,7 +188,7 @@ private:
 
     void number_slider(const mc_control::ElementId & , double /*data*/, double /*min*/, double /*max*/) override {}
 
-    void robot(const mc_control::ElementId & id,
+    void robot(const mc_control::ElementId & /*id*/,
                      const std::vector<std::string> & /*parameters*/,
                      const std::vector<std::vector<double>> & /*q*/,
                      const sva::PTransformd & /*posW*/) override {}
@@ -223,7 +233,7 @@ private:
     std::map<std::string,SubscridedbId> subscribed_id_;
     
     mc_rbdyn::RobotsPtr robots_ = nullptr;
-    int online_count_ = 100;
+    int online_count_ = 1e4;
     bool online_ = false; // true if connected to server
 
     double simulated_delay_ = 0.1;

@@ -170,6 +170,12 @@ public:
         human_2_pose_.updateHumanState(human_2);
     }
 
+    void updateRobotLinksMap(const biRobotTeleop::RobotPose & robot_1, const biRobotTeleop::RobotPose & robot_2)
+    {
+        robot_1_pose_links_.load(robot_1);
+        robot_2_pose_links_.load(robot_2);
+    }
+
     void updateHumanConfig(const mc_rtc::Configuration & human_1, const mc_rtc::Configuration & human_2)
     {
         human_1_pose_.setCvx(human_1);
@@ -180,6 +186,12 @@ public:
     {
         return {human_1_pose_,human_2_pose_};
     }
+
+    std::vector<biRobotTeleop::RobotPose> getRobotPose()
+    {
+        return {robot_1_pose_links_,robot_2_pose_links_};
+    }
+
 
     biRobotTeleop::Limbs getTargetLink(const int rIndex)
     {
@@ -309,7 +321,7 @@ private:
         const sva::MotionVecd v_l_l = robot.bodyVelB(link);
         const sva::PTransformd X_0_l = robot.bodyPosW(link);
         const sva::PTransformd X_l_t = sva::PTransformd(off);
-        return (sva::PTransformd(X_0_l.rotation().transpose(),Eigen::Vector3d::Zero()) * X_l_t) * v_l_l;
+        return (sva::PTransformd(X_0_l.rotation()).inv() * X_l_t) * v_l_l;
     }
 
 
