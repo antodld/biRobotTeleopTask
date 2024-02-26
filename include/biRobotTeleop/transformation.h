@@ -27,7 +27,7 @@ public:
         type_ = t;
 
     }
-    void add(Limbs part, const sva::PTransformd & transfo)
+    void add(const Limbs part, const sva::PTransformd & transfo)
     {
         transformations_[part] = transfo;
     }

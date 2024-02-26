@@ -299,6 +299,7 @@ struct RobotPose
 private:
 
   std::map<Limbs, std::string> links_;
+  std::map<std::string,Limbs> limbs_;
   std::map<Limbs, std::string> convex_;
   
   //transformation between the body Frame to an offsetted link body frame such as
@@ -368,9 +369,11 @@ public:
     robotName(pose.robotName());
   }
 
-  void setNameAndConvex(Limbs part,const mc_rtc::Configuration & config)
+  void setNameAndConvex(const Limbs part,const mc_rtc::Configuration & config)
   {
-    config("name",links_[part]); 
+    std::string link;
+    config("name",link);
+    setName(part,link); 
     if(config.has("convex"))
     {
       config("convex",convex_[part]); 
@@ -380,11 +383,12 @@ public:
       convex_[part] = links_[part];
     }
   }
-  void setName(Limbs part, const  std::string & name)
+  void setName(const Limbs part, const std::string & name)
   {
     links_[part] = name;
+    limbs_[name] = part;
   }
-  void setOffset(Limbs part, const sva::PTransformd & offset)
+  void setOffset(const Limbs part, const sva::PTransformd & offset)
   {
     links_offsets_.add(part , offset);
   }
@@ -394,12 +398,22 @@ public:
     return robot_name_;
   }
 
-  std::string getName(const Limbs part) const
+  const std::string getName(const Limbs part) const
   {
     return links_.at(part);
   }
 
-  std::string getConvexName(const Limbs part) const
+  const Limbs getLimb(const std::string frame) const
+  {
+    if(limbs_.find(frame) != limbs_.end())
+    {
+      return limbs_.at(frame);
+    }
+    std::cout << "frame not referenced" << std::endl;
+    return Limbs::Head;
+  }
+
+  const std::string getConvexName(const Limbs part) const
   {
     return convex_.at(part);
   }
