@@ -5,8 +5,9 @@ namespace biRobotTeleop
 {
 
 
-void HumanRobotDataReceiver::init(const std::string human_name, const std::string robot_name ,const std::string & pub, const std::string & rec) 
+void HumanRobotDataReceiver::init(const std::string name, const std::string human_name, const std::string robot_name ,const std::string & pub, const std::string & rec) 
 {
+    name_ = name;
     human_name_ = human_name;
     robot_name_ = robot_name;
     h_ = HumanPose(human_name_);
@@ -15,7 +16,7 @@ void HumanRobotDataReceiver::init(const std::string human_name, const std::strin
     robots_->load("initial",*mc_rbdyn::RobotLoader().get_robot_module({"JVRC1"}));
     robots_->load("initial_thread",*mc_rbdyn::RobotLoader().get_robot_module({"JVRC1"}));
     connect(rec,pub);
-    // startConnection();
+    startConnection();
 }
 
 void HumanRobotDataReceiver::startConnection()
@@ -30,10 +31,17 @@ void HumanRobotDataReceiver::startConnection()
         while(run_)
         {
           online_count_ +=1;
+              
+          run(buff, t_last_received);
+          
           {
-            std::lock_guard<std::mutex> lk_copy_state(mutex_copy_);
-            run(buff, t_last_received);
+            if(robots_->hasRobot(robot_name_))
+            {
+                updateRobot(robots_->robot(robot_name_),robots_->robot(robot_name_ + "_thread"));
+            }
+            h_.updateHumanState(h_thread_);
           }
+
           online_ = online_count_ < 1000;
           std::this_thread::sleep_for(std::chrono::microseconds(1000));
         }
@@ -50,11 +58,13 @@ void HumanRobotDataReceiver::runAndUpdate()
     online_count_ +=1;
     
     run(buff, t_last_received);
-    h_.updateHumanState(h_thread_);
-    if(robots_->hasRobot(robot_name_))
     {
         std::lock_guard<std::mutex> lk_copy_state_delay(mutex_robot_);
-        updateRobot(robots_->robot(robot_name_),robots_->robot(robot_name_ + "_thread"));
+        h_.updateHumanState(h_thread_);
+        if(robots_->hasRobot(robot_name_))
+        {
+            updateRobot(robots_->robot(robot_name_),robots_->robot(robot_name_ + "_thread"));
+        }
     }
     
     online_ = online_count_ < 1000;
@@ -70,7 +80,7 @@ void HumanRobotDataReceiver::robot_msg(const mc_control::ElementId & id,const mc
         {
             if(!robots_->hasRobot(robot_name_) && !robots_->hasRobot(robot_name_ + "_thread"))
             {
-                std::cout << "update robot name " << std::endl;
+                std::cout << name_ << " update robot " << robot_name_ << std::endl;
                 robots_->load( robot_name_,*mc_rbdyn::RobotLoader().get_robot_module(msg.parameters) );
                 robots_->load( robot_name_ + "_thread",*mc_rbdyn::RobotLoader().get_robot_module(msg.parameters) );
                 robots_->removeRobot(robots_->robotIndex("initial") );
@@ -100,9 +110,20 @@ void HumanRobotDataReceiver::robot_msg(const mc_control::ElementId & id,const mc
 
 void HumanRobotDataReceiver::checkbox(const mc_control::ElementId & id, bool s)
 {
-    if(id.category[0] == "BiRobotTeleop" && id.name == "Online")
+    if(id.category[0] == "BiRobotTeleop")
     {
-        online_count_ = 0;
+        if(id.name == "Online")
+        {
+            online_count_ = 0;
+        }
+        else if(id.category.size() >= 4) 
+        {
+            if(id.category[2] == human_name_ && id.category.back() == "Online")
+            {
+                const auto limb = str2Limb(id.name);
+                h_thread_.setLimbActiveState(limb,s);
+            }
+        }
     }
     for (auto & subs : subscribed_id_)
     {

@@ -86,11 +86,11 @@ public:
    * 
    * @param gui 
    */
-  void addPoseToGUI(mc_rtc::gui::StateBuilder & gui);
+  void addPoseToGUI(mc_rtc::gui::StateBuilder & gui,const bool use_offset = true);
 
   void addOffsetToGUI(mc_rtc::gui::StateBuilder & gui);
 
-  bool limbActive(const Limbs limb) const
+  const bool limbActive(const Limbs limb) const
   {
     return data_online_.at(limb);
   }
@@ -283,6 +283,7 @@ public:
       setPose(limb,human.getPose(limb));
       setVel(limb,human.getVel(limb));
       setAcc(limb,human.getAcc(limb));
+      setLimbActiveState(limb,human.limbActive(limb));
     } 
   }
 

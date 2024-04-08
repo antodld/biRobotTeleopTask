@@ -67,7 +67,12 @@ public:
         
     }
 
-    void init(const std::string human_name, const std::string robot_name ,const std::string & pub, const std::string & rec);
+    void deactivate()
+    {
+        stop();
+    }
+
+    void init(const std::string name, const std::string human_name, const std::string robot_name ,const std::string & pub, const std::string & rec);
 
     void subsbscribe(const std::string & sub_name, const mc_rtc::gui::Elements type,const std::vector<std::string> & category, const std::string & name)
     {
@@ -226,6 +231,7 @@ private:
 
     std::string human_name_;
     std::string robot_name_;
+    std::string name_;
     HumanPose h_;
     HumanPose h_thread_;
 

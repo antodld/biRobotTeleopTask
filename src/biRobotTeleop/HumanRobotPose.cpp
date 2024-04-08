@@ -1,6 +1,7 @@
 #include "../../include/biRobotTeleop/HumanRobotPose.h"
 #include <mc_rtc/gui/Label.h>
 #include <mc_rtc/gui/Transform.h>
+#include <mc_rtc/gui/Checkbox.h>
 
 namespace biRobotTeleop
 {
@@ -49,11 +50,19 @@ void HumanPose::addDataToGUI(mc_rtc::gui::StateBuilder & gui)
                                     return getAcc(limb).angular();
                                 } )
                         );
+            gui.addElement( {"BiRobotTeleop","Human Pose",name_,"Online"},
+                            mc_rtc::gui::Checkbox(
+                                limb2Str(limb),
+                                [this,limb] () -> const bool
+                                {
+                                    return limbActive(limb);
+                                },[this](){})
+                        );
         }
     }
 }
 
-void HumanPose::addPoseToGUI(mc_rtc::gui::StateBuilder & gui)
+void HumanPose::addPoseToGUI(mc_rtc::gui::StateBuilder & gui,const bool use_offset)
 {
     if (!gui.hasElement({"BiRobotTeleop","Human Pose",name_},"name"))
     {
@@ -64,9 +73,10 @@ void HumanPose::addPoseToGUI(mc_rtc::gui::StateBuilder & gui)
             gui.addElement( {"BiRobotTeleop","Human Pose",name_,"Transforms"},
                             mc_rtc::gui::Transform(
                                 limb2Str(limb),
-                                [this,limb] () -> const sva::PTransformd 
+                                [this,limb,use_offset] () -> const sva::PTransformd 
                                 {
-                                    return getOffset(limb) * getPose(limb);
+                                    if(use_offset){return getOffset(limb) * getPose(limb);}
+                                    return getPose(limb);
                                 } )
                         );
         }

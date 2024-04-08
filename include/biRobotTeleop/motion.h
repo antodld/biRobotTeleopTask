@@ -26,12 +26,12 @@ class motion
         name_ = n;
         type_ = t;
     }
-    void add(Limbs part, const sva::MotionVecd & motion)
+    void add(const Limbs part, const sva::MotionVecd & motion)
     {
         motions_[part] = motion;
     }
 
-    const sva::MotionVecd & get(Limbs part) const
+    const sva::MotionVecd & get(const Limbs part) const
     {
         return motions_.at(part);
     }
