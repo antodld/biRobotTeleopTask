@@ -17,13 +17,12 @@ include(cmake/base.cmake)
 
 project(${PROJECT_NAME} LANGUAGES CXX VERSION ${PROJECT_VERSION})
 
-add_project_dependency(mc_rtc REQUIRED)
 add_project_dependency(RBDyn REQUIRED NO_MODULE)
 add_project_dependency(sch-core REQUIRED NO_MODULE)
 add_project_dependency(eigen-qld REQUIRED NO_MODULE)
 add_project_dependency(Boost REQUIRED COMPONENTS filesystem timer ${BOOST_STACKTRACE})
 
-
+find_package(mc_rtc REQUIRED)
 find_package(SpaceVecAlg REQUIRED)
 find_package(Tasks REQUIRED)
 find_package(eigen-quadprog REQUIRED)

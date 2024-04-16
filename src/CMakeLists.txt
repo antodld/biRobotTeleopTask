@@ -92,12 +92,12 @@ target_link_libraries(mc_tasks_${PROJECT_NAME}
                       PUBLIC 
                       SpaceVecAlg::SpaceVecAlg 
                       ${Boost_LIBRARIES}
-                      eigen-quadprog)
+                      eigen-quadprog::eigen-quadprog)
 target_link_libraries(mc_tasks_${PROJECT_NAME} PUBLIC utils_${PROJECT_NAME})
 target_link_libraries(mc_tasks_${PROJECT_NAME} PUBLIC Tasks_${PROJECT_NAME})
 target_link_libraries(mc_tasks_${PROJECT_NAME} 
                       PUBLIC
-                      mc_tasks)
+                      mc_rtc::mc_tasks)
 
 
 set_target_properties(mc_tasks_${PROJECT_NAME} PROPERTIES
