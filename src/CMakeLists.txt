@@ -56,8 +56,8 @@ target_link_libraries(Tasks_${PROJECT_NAME}
                       PUBLIC 
                       SpaceVecAlg::SpaceVecAlg 
                       ${Boost_LIBRARIES}
-                      eigen-quadprog
-                      Tasks
+                      eigen-quadprog::eigen-quadprog
+                      Tasks::Tasks
                       )
 
 set_target_properties(Tasks_${PROJECT_NAME} PROPERTIES

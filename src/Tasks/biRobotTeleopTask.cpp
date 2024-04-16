@@ -65,7 +65,7 @@ void biRobotTeleopTask::updateNrVars(const std::vector<rbd::MultiBody> & /* mbs 
 }
 
 void biRobotTeleopTask::update(const std::vector<rbd::MultiBody> & mbs,
-                                     const std::vector<rbd::MultiBodyConfig> & mbcs,
+                                     const std::vector<rbd::MultiBodyConfig> &,
                                      const SolverData & data)
 {
 

@@ -115,6 +115,11 @@ public:
         return robots_->robot(0);
     } 
     
+    const mc_rtc::gui::RobotMsgData & getRobotMsg() const noexcept
+    {
+        return robotMsg;
+    }
+
     const std::string name() const noexcept
     {
         return human_name_;
@@ -132,18 +137,9 @@ public:
         simulated_delay_ = d;
     }
 
-    void update()
-    {
-        std::lock_guard<std::mutex> lk_copy_state(mutex_copy_);
-        h_.updateHumanState(h_thread_);
-        if(robots_->hasRobot(robot_name_))
-        {
-            std::lock_guard<std::mutex> lk_copy_state_delay(mutex_robot_);
-            updateRobot(robots_->robot(robot_name_),robots_->robot(robot_name_ + "_thread"));
-        }
-    }
-
     void runAndUpdate();
+
+    void update();
 
 
 private:
@@ -235,12 +231,16 @@ private:
     HumanPose h_;
     HumanPose h_thread_;
 
+    mc_rtc::gui::RobotMsgData robotMsg;
+    mc_rtc::gui::RobotMsgData robotMsg_thread;
+
     std::map<std::string,std::any> subscribed_data_;
     std::map<std::string,SubscridedbId> subscribed_id_;
     
     mc_rbdyn::RobotsPtr robots_ = nullptr;
     int online_count_ = 1e4;
     bool online_ = false; // true if connected to server
+    bool online_thread_ = false;
 
     double simulated_delay_ = 0.1;
     std::mutex mutex_robot_;
