@@ -110,14 +110,68 @@ public:
         return h_;
     }
 
-    const mc_rbdyn::Robot & getRobot() const noexcept
+    const std::string robotName() const
     {
-        return robots_->robot(0);
-    } 
-    
-    const mc_rtc::gui::RobotMsgData & getRobotMsg() const noexcept
+        std::lock_guard<std::mutex> lock(this->mutex_robot_);
+        return robots_->robot().name();
+    }
+
+    /**
+     * Get a copy of the current robots
+     *
+     * This is inefficient, prefer using \ref updateRobot(mc_rbdyn::Robot & extRobot, bool acc) or \ref getRobotMsg instead
+     */
+    const mc_rbdyn::RobotsPtr getRobots()
     {
+        std::lock_guard<std::mutex> lock(this->mutex_robot_);
+        auto robotsCtl = mc_rbdyn::Robots::make();
+        robots_->copy(*robotsCtl);
+        return robotsCtl;
+    }
+
+    /**
+     * Get a copy of the last received robotMsg
+     */
+    const mc_rtc::gui::RobotMsgData getRobotMsg() const
+    {
+        std::lock_guard<std::mutex> lock(this->mutex_robot_);
         return robotMsg;
+    }
+
+    /**
+     * Update an external Robot instance from the received data. This is thread-safe
+     */
+    void updateRobot(mc_rbdyn::Robot & extRobot, bool updateFK = true, bool acc = false)
+    {
+        {
+            std::lock_guard<std::mutex> lock(this->mutex_robot_);
+            const auto & robot = robots_->robot();
+
+            // Ensure that the received robot module and the local robot module are the same
+            if(extRobot.module().parameters() != robot.module().parameters())
+            {
+              mc_rtc::log::error_and_throw("[{}] Received robot module parameters for robot {} ([{}]) do not match local robot module parameters ([{}]). Fix either your mc_rtc.yaml configuration or BiRobotTeleoperation.yaml", name_, robot.name(), mc_rtc::io::to_string(robot.module().parameters()), mc_rtc::io::to_string(extRobot.module().parameters()));
+            }
+
+            const auto & msg = robotMsg;
+            extRobot.mbc().q = rbd::vectorToParam(robot.mb(), msg.q);
+            extRobot.mbc().alpha = rbd::vectorToDof(robot.mb(), msg.alpha);
+            if(acc)
+            {
+                extRobot.mbc().alphaD = rbd::vectorToDof(robot.mb(),msg.alphaD);
+            }
+            extRobot.posW(msg.posW);
+        }
+
+        if(updateFK)
+        {
+            extRobot.forwardKinematics();
+            extRobot.forwardVelocity();
+            if(acc)
+            {
+                extRobot.forwardAcceleration();
+            }
+        }
     }
 
     const std::string name() const noexcept
@@ -236,15 +290,15 @@ private:
 
     std::map<std::string,std::any> subscribed_data_;
     std::map<std::string,SubscridedbId> subscribed_id_;
-    
-    mc_rbdyn::RobotsPtr robots_ = nullptr;
+
+    mc_rbdyn::RobotsPtr robots_ = nullptr; // robots instance updated from the GUI thread
     int online_count_ = 1e4;
     bool online_ = false; // true if connected to server
     bool online_thread_ = false;
 
     double simulated_delay_ = 0.1;
-    std::mutex mutex_robot_;
-    std::mutex mutex_copy_;
+    mutable std::mutex mutex_robot_;
+    mutable std::mutex mutex_copy_;
     std::thread robot_thread_;
 
 

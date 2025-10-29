@@ -1,3 +1,6 @@
 build/
 .vscode/
 cmake
+build
+.cache/
+compile_commands.json
