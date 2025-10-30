@@ -1,117 +1,92 @@
 #include "../../include/biRobotTeleop/HumanRobotPose.h"
+
+#include <mc_rtc/gui/Checkbox.h>
 #include <mc_rtc/gui/Label.h>
 #include <mc_rtc/gui/Transform.h>
-#include <mc_rtc/gui/Checkbox.h>
 
 namespace biRobotTeleop
 {
 
 void HumanPose::addDataToGUI(mc_rtc::gui::StateBuilder & gui)
 {
-    if (!gui.hasElement({"BiRobotTeleop","Human Pose",name_},"name"))
+  if(!gui.hasElement({"BiRobotTeleop", "Human Pose", name_}, "name"))
+  {
+    gui.addElement({"BiRobotTeleop", "Human Pose", name_},
+                   mc_rtc::gui::Label("name", [this]() -> const std::string & { return name_; }));
+    for(int i = 0; i <= Limbs::RightArm; i++)
     {
-        gui.addElement( {"BiRobotTeleop","Human Pose",name_},mc_rtc::gui::Label("name",[this]() -> const std::string & { return name_;} ));
-        for (int i = 0 ; i <= Limbs::RightArm;i++)
-        {
-            const auto limb = static_cast<Limbs>(i);
-            gui.addElement( {"BiRobotTeleop","Human Pose",name_,"Transforms"},
-                            mc_rtc::gui::Transform(
-                                limb2Str(limb),
-                                [this,limb] () -> const sva::PTransformd &
-                                {
-                                    return getPose(limb);
-                                } )
-                        );
-            gui.addElement( {"BiRobotTeleop","Human Pose",name_,"Velocity"},
-                            mc_rtc::gui::ArrayLabel(
-                                limb2Str(limb) + "_linear",{"vx","vy","vz"},
-                                [this,limb] () -> const Eigen::Vector3d &
-                                {
-                                    return getVel(limb).linear();
-                                } ),
-                            mc_rtc::gui::ArrayLabel(
-                                limb2Str(limb) + "_angular",{"wx","wy","wz"},
-                                [this,limb] () -> const Eigen::Vector3d &
-                                {
-                                    return getVel(limb).angular();
-                                } )
-                        );
-            gui.addElement( {"BiRobotTeleop","Human Pose",name_,"Acceleration"},
-                            mc_rtc::gui::ArrayLabel(
-                                limb2Str(limb) + "_linear",{"vx","vy","vz"},
-                                [this,limb] () -> const Eigen::Vector3d &
-                                {
-                                    return getAcc(limb).linear();
-                                } ),
-                            mc_rtc::gui::ArrayLabel(
-                                limb2Str(limb) + "_angular",{"wx","wy","wz"},
-                                [this,limb] () -> const Eigen::Vector3d &
-                                {
-                                    return getAcc(limb).angular();
-                                } )
-                        );
-            gui.addElement( {"BiRobotTeleop","Human Pose",name_,"Online"},
-                            mc_rtc::gui::Checkbox(
-                                limb2Str(limb),
-                                [this,limb] () -> const bool
-                                {
-                                    return limbActive(limb);
-                                },[this](){})
-                        );
-        }
+      const auto limb = static_cast<Limbs>(i);
+      gui.addElement(
+          {"BiRobotTeleop", "Human Pose", name_, "Transforms"},
+          mc_rtc::gui::Transform(limb2Str(limb), [this, limb]() -> const sva::PTransformd & { return getPose(limb); }));
+      gui.addElement(
+          {"BiRobotTeleop", "Human Pose", name_, "Velocity"},
+          mc_rtc::gui::ArrayLabel(limb2Str(limb) + "_linear", {"vx", "vy", "vz"},
+                                  [this, limb]() -> const Eigen::Vector3d & { return getVel(limb).linear(); }),
+          mc_rtc::gui::ArrayLabel(limb2Str(limb) + "_angular", {"wx", "wy", "wz"},
+                                  [this, limb]() -> const Eigen::Vector3d & { return getVel(limb).angular(); }));
+      gui.addElement(
+          {"BiRobotTeleop", "Human Pose", name_, "Acceleration"},
+          mc_rtc::gui::ArrayLabel(limb2Str(limb) + "_linear", {"vx", "vy", "vz"},
+                                  [this, limb]() -> const Eigen::Vector3d & { return getAcc(limb).linear(); }),
+          mc_rtc::gui::ArrayLabel(limb2Str(limb) + "_angular", {"wx", "wy", "wz"},
+                                  [this, limb]() -> const Eigen::Vector3d & { return getAcc(limb).angular(); }));
+      gui.addElement({"BiRobotTeleop", "Human Pose", name_, "Online"},
+                     mc_rtc::gui::Checkbox(
+                         limb2Str(limb), [this, limb]() -> const bool { return limbActive(limb); }, [this]() {}));
     }
+  }
 }
 
-void HumanPose::addPoseToGUI(mc_rtc::gui::StateBuilder & gui,const bool use_offset)
+void HumanPose::addPoseToGUI(mc_rtc::gui::StateBuilder & gui, const bool use_offset)
 {
-    if (!gui.hasElement({"BiRobotTeleop","Human Pose",name_},"name"))
+  if(!gui.hasElement({"BiRobotTeleop", "Human Pose", name_}, "name"))
+  {
+    gui.addElement({"BiRobotTeleop", "Human Pose", name_},
+                   mc_rtc::gui::Label("name", [this]() -> const std::string & { return name_; }));
+    for(int i = 0; i <= Limbs::RightArm; i++)
     {
-        gui.addElement( {"BiRobotTeleop","Human Pose",name_},mc_rtc::gui::Label("name",[this]() -> const std::string & { return name_;} ));
-        for (int i = 0 ; i <= Limbs::RightArm;i++)
-        {
-            const auto limb = static_cast<Limbs>(i);
-            gui.addElement( {"BiRobotTeleop","Human Pose",name_,"Transforms"},
-                            mc_rtc::gui::Transform(
-                                limb2Str(limb),
-                                [this,limb,use_offset] () -> const sva::PTransformd 
-                                {
-                                    if(use_offset){return getOffset(limb) * getPose(limb);}
-                                    return getPose(limb);
-                                } )
-                        );
-        }
+      const auto limb = static_cast<Limbs>(i);
+      gui.addElement({"BiRobotTeleop", "Human Pose", name_, "Transforms"},
+                     mc_rtc::gui::Transform(limb2Str(limb),
+                                            [this, limb, use_offset]() -> const sva::PTransformd
+                                            {
+                                              if(use_offset)
+                                              {
+                                                return getOffset(limb) * getPose(limb);
+                                              }
+                                              return getPose(limb);
+                                            }));
     }
+  }
 }
 
 void HumanPose::addOffsetToGUI(mc_rtc::gui::StateBuilder & gui)
 {
-    for (int i = 0 ; i <= Limbs::RightArm;i++)
-    {
-        const auto limb = static_cast<Limbs>(i);
-        gui.addElement(this, {"BiRobotTeleop","Human Pose", name_,"Offsets",limb2Str(limb)},
+  for(int i = 0; i <= Limbs::RightArm; i++)
+  {
+    const auto limb = static_cast<Limbs>(i);
+    gui.addElement(this, {"BiRobotTeleop", "Human Pose", name_, "Offsets", limb2Str(limb)},
 
-                    mc_rtc::gui::ArrayInput(
-                        "translation [m]", {"x", "y", "z"},
-                        [this,limb]() -> const Eigen::Vector3d & { return getOffset(limb).translation(); },
-                        [this,limb](const Eigen::Vector3d & t) {
-                            auto offset = getOffset(limb); 
-                            offset.translation() = t;
-                            setOffset(limb,offset);
-                            }),
-                    mc_rtc::gui::ArrayInput(
-                        "rotation [deg]", {"r", "p", "y"},
-                        [this,limb]() -> Eigen::Vector3d {
-                        return mc_rbdyn::rpyFromMat(getOffset(limb).rotation()) * 180. / mc_rtc::constants::PI;
-                        },
-                        [this,limb](const Eigen::Vector3d & rpy) {
-                            auto offset = getOffset(limb); 
-                            offset.rotation() = mc_rbdyn::rpyToMat(rpy * mc_rtc::constants::PI / 180.);
-                            setOffset(limb,offset);
-                        })
-                        );
-    }
+                   mc_rtc::gui::ArrayInput(
+                       "translation [m]", {"x", "y", "z"},
+                       [this, limb]() -> const Eigen::Vector3d & { return getOffset(limb).translation(); },
+                       [this, limb](const Eigen::Vector3d & t)
+                       {
+                         auto offset = getOffset(limb);
+                         offset.translation() = t;
+                         setOffset(limb, offset);
+                       }),
+                   mc_rtc::gui::ArrayInput(
+                       "rotation [deg]", {"r", "p", "y"}, [this, limb]() -> Eigen::Vector3d
+                       { return mc_rbdyn::rpyFromMat(getOffset(limb).rotation()) * 180. / mc_rtc::constants::PI; },
+                       [this, limb](const Eigen::Vector3d & rpy)
+                       {
+                         auto offset = getOffset(limb);
+                         offset.rotation() = mc_rbdyn::rpyToMat(rpy * mc_rtc::constants::PI / 180.);
+                         setOffset(limb, offset);
+                       }));
+  }
 }
 
-
-
-}
+} // namespace biRobotTeleop
