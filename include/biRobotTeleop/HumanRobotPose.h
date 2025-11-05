@@ -353,6 +353,7 @@ public:
     setNameAndConvex(Limbs::LeftForearm, config("left_forearm"));
     setNameAndConvex(Limbs::RightForearm, config("right_forearm"));
     setNameAndConvex(Limbs::Pelvis, config("pelvis"));
+    setNameAndConvex(Limbs::Head, config("head"));
 
     if(config("left_hand").has("offset"))
     {
