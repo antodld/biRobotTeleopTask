@@ -1,4 +1,5 @@
 #pragma once
+#include <mc_rbdyn/RobotModule.h>
 #include <mc_rtc/Configuration.h>
 #include <mc_rtc/gui.h>
 
@@ -22,7 +23,6 @@ namespace biRobotTeleop
  * Offsets are included to account for a unified frame system
  * It is set such as when the human is standing straight with its arms alongside its body,
  * the frame are all oriented similarly as the world frame
- *
  */
 struct HumanPose
 {
@@ -42,6 +42,9 @@ private:
   std::map<Limbs, double> convex_length_;
   std::map<Limbs, bool>
       data_online_; // By default at false, can be used to set if a data has not been updated for a long time
+
+  std::map<Limbs, std::string> links_;
+  std::map<std::string, Limbs> limbs_;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -92,7 +95,7 @@ public:
 
   void addOffsetToGUI(mc_rtc::gui::StateBuilder & gui);
 
-  const bool limbActive(const Limbs limb) const
+  bool limbActive(const Limbs limb) const
   {
     return data_online_.at(limb);
   }
@@ -102,53 +105,49 @@ public:
     data_online_[limb] = state;
   }
 
-  void setCvx(const mc_rtc::Configuration & config)
+  void setLimbMap(const mc_rtc::Configuration & config)
   {
-    double length = config("arm")("length");
-    double radius = config("arm")("radius");
-    convex_length_[LeftArm] = length;
-    convex_radius_[LeftArm] = radius;
-    convex_length_[RightArm] = length;
-    convex_radius_[RightArm] = radius;
-    sva::PTransformd offset = config("arm")("offset")("left");
-    limbs_offset_.add(LeftArm, offset);
-
-    offset = config("arm")("offset")("right");
-    limbs_offset_.add(RightArm, offset);
-
-    length = config("forearm")("length");
-    radius = config("forearm")("radius");
-    convex_length_[LeftForearm] = length;
-    convex_radius_[LeftForearm] = radius;
-    convex_length_[RightForearm] = length;
-    convex_radius_[RightForearm] = radius;
-
-    offset = config("forearm")("offset")("left");
-    limbs_offset_.add(LeftForearm, offset);
-
-    offset = config("forearm")("offset")("right");
-    limbs_offset_.add(RightForearm, offset);
-
-    length = config("hand")("length");
-    radius = config("hand")("radius");
-    convex_length_[LeftHand] = length;
-    convex_radius_[LeftHand] = radius;
-    convex_length_[RightHand] = length;
-    convex_radius_[RightHand] = radius;
-
-    offset = config("hand")("offset")("left");
-    limbs_offset_.add(LeftHand, offset);
-
-    offset = config("hand")("offset")("right");
-    limbs_offset_.add(RightHand, offset);
-
-    offset = config("pelvis")("offset");
-    limbs_offset_.add(Pelvis, offset);
+    auto setLinkName = [this](Limbs limb, std::string linkName)
+    {
+      links_[limb] = linkName;
+      limbs_[linkName] = limb;
+    };
+    setLinkName(Limbs::LeftHand, config("left_hand"));
+    setLinkName(Limbs::RightHand, config("right_hand"));
+    setLinkName(Limbs::LeftArm, config("left_arm"));
+    setLinkName(Limbs::RightArm, config("right_arm"));
+    setLinkName(Limbs::LeftForearm, config("left_forearm"));
+    setLinkName(Limbs::RightForearm, config("right_forearm"));
+    setLinkName(Limbs::Pelvis, config("pelvis"));
   }
 
-  sch::S_Cylinder applyTransformation(const Limbs limb, const sva::PTransformd & X_0_p) const
+  void setCvx(const mc_rtc::Configuration & config)
   {
+    auto handleConvexAndOffset = [this, &config](Limbs limb, std::string limbName, std::string side)
+    {
+      auto limbC = config(limbName);
+      if(limbC.has("length") && limbC.has("radius"))
+      {
+        mc_rtc::log::info("set convex cylinder for limb {}, limbName {}", limb2Str(limb), limbName);
+        convex_length_[limb] = limbC("length");
+        convex_radius_[limb] = limbC("radius");
+      }
 
+      sva::PTransformd offset = limbC("offset")(side);
+      limbs_offset_.add(limb, offset);
+    };
+    handleConvexAndOffset(LeftArm, "arm", "left");
+    handleConvexAndOffset(RightArm, "arm", "right");
+    handleConvexAndOffset(LeftForearm, "forearm", "left");
+    handleConvexAndOffset(RightForearm, "forearm", "right");
+    handleConvexAndOffset(LeftHand, "hand", "left");
+    handleConvexAndOffset(RightHand, "hand", "right");
+
+    limbs_offset_.add(Pelvis, config("pelvis")("offset"));
+  }
+
+  mc_rbdyn::S_ObjectPtr applyTransformation(const Limbs limb, const sva::PTransformd & X_0_p) const
+  {
     sva::PTransformd X_p_p1 = sva::PTransformd::Identity();
     sva::PTransformd X_p_p2 =
         sva::PTransformd(Eigen::Matrix3d::Identity(), Eigen::Vector3d{0, 0, -convex_length_.at(limb)});
@@ -156,15 +155,23 @@ public:
     auto p1 = (X_p_p1 * X_0_p).translation();
     auto p2 = (X_p_p2 * X_0_p).translation();
     sch::Scalar r = convex_radius_.at(limb);
-    sch::S_Cylinder cvx_out =
-        sch::S_Cylinder(sch::Point3(p1.x(), p1.y(), p1.z()), sch::Point3(p2.x(), p2.y(), p2.z()), r);
-
-    return cvx_out;
+    return mc_rbdyn::S_ObjectPtr(
+        new sch::S_Cylinder(sch::Point3(p1.x(), p1.y(), p1.z()), sch::Point3(p2.x(), p2.y(), p2.z()), r));
   }
 
-  sch::S_Cylinder getConvex(Limbs limb) const
+  mc_rbdyn::S_ObjectPtr getConvex(Limbs limb, const mc_rbdyn::Robot & robot) const
   {
-    return applyTransformation(limb, getOffset(limb) * getPose(limb));
+    mc_rtc::log::info("get convex for limb {}", limb2Str(limb));
+    if(convex_length_.count(limb) && convex_radius_.count(limb))
+    { // we have a radius and length in the convex configuration, use a simple cylinder shape
+      mc_rtc::log::info("get cylinder convex for robot {} and limb: {}", robot.name(), limb2Str(limb));
+      return applyTransformation(limb, getOffset(limb) * getPose(limb));
+    }
+    else
+    {
+      mc_rtc::log::info("get convex for robot {} and limb: {}", robot.name(), limb2Str(limb));
+      return robot.convex(links_.at(limb)).second;
+    }
   }
 
   const sva::PTransformd & getPose(Limbs limb) const

@@ -156,11 +156,12 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
 
   const auto robot_1_cvx = robot_1.convex(robot_1_cvx_name);
   const auto robot_2_cvx = robot_2.convex(robot_2_cvx_name);
-  auto human_1_cvx = human_1_pose_.getConvex(link_1_);
-  auto human_2_cvx = human_2_pose_.getConvex(link_2_);
+  // FIXME: this is the convex on the robot not human
+  auto human_1_cvx = human_1_pose_.getConvex(link_1_, robot_1);
+  auto human_2_cvx = human_2_pose_.getConvex(link_2_, robot_2);
 
-  sch::CD_Pair pair_h1_r2(&human_1_cvx, robot_2_cvx.second.get());
-  sch::CD_Pair pair_h2_r1(&human_2_cvx, robot_1_cvx.second.get());
+  sch::CD_Pair pair_h1_r2(human_1_cvx.get(), robot_2_cvx.second.get());
+  sch::CD_Pair pair_h2_r1(human_2_cvx.get(), robot_1_cvx.second.get());
 
   sch::Point3 p1, p2;
   pair_h1_r2.getClosestPoints(p1, p2);
