@@ -36,6 +36,8 @@ public:
   biRobotTeleopTask(const mc_solver::QPSolver & solver,
                     unsigned int r1Index,
                     unsigned int r2Index,
+                    const mc_rbdyn::Robot & human1,
+                    const mc_rbdyn::Robot & human2,
                     biRobotTeleop::Limbs link1 = biRobotTeleop::Limbs::LeftHand,
                     biRobotTeleop::Limbs link2 = biRobotTeleop::Limbs::RightHand,
                     double stiffness = 1.,
@@ -175,6 +177,12 @@ public:
   {
     human_1_pose_.updateHumanState(human_1);
     human_2_pose_.updateHumanState(human_2);
+  }
+
+  void updateHumanLimbMap(const mc_rtc::Configuration & limbMap)
+  {
+    human_1_pose_.setLimbMap(limbMap);
+    human_2_pose_.setLimbMap(limbMap);
   }
 
   void updateRobotLinksMap(const biRobotTeleop::RobotPose & robot_1, const biRobotTeleop::RobotPose & robot_2)
@@ -336,6 +344,7 @@ private:
     return (sva::PTransformd(X_0_l.rotation()).inv() * X_l_t) * v_l_l;
   }
 
+private:
   tasks::qp::biRobotTeleopTask task_;
 
   /** True if added to solver */
@@ -344,6 +353,8 @@ private:
   const mc_rbdyn::Robots & robots_;
   unsigned int r2Index_ = 1;
   unsigned int r1Index_ = 0;
+  const mc_rbdyn::Robot & human1_; // estimated human1 robot
+  const mc_rbdyn::Robot & human2_; // estimated human2 robot
 
   unsigned int main_indx_ = 0;
 
