@@ -209,13 +209,11 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   human_2_point_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)).translation();
   robot_1_point_ = (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation();
 
-
-  //unused ?
+  // unused ?
   X_h1_r2_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)) * (X_h1_h1p * human_1_pose_.getPose(link_1_)).inv();
   X_r1_h2_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)) * (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).inv();
 
-  eval_.segment(3, 3) = robot_2_point_ - human_1_point_
-                        - (human_2_point_ - robot_1_point_);
+  eval_.segment(3, 3) = robot_2_point_ - human_1_point_ - (human_2_point_ - robot_1_point_);
 
   speed_.segment(3, 3) = getTargetVel(robot_2, robot_2_link_name, X_r2_r2p.translation()).linear()
                          - human_1_pose_.getVel(link_1_, X_h1_h1p).linear()
