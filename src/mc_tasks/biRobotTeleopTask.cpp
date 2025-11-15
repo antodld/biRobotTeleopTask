@@ -26,12 +26,14 @@ namespace mc_tasks
 biRobotTeleopTask::biRobotTeleopTask(const mc_solver::QPSolver & solver,
                                      unsigned int r1Index,
                                      unsigned int r2Index,
+                                     const mc_rbdyn::Robot & human1,
+                                     const mc_rbdyn::Robot & human2,
                                      biRobotTeleop::Limbs link1,
                                      biRobotTeleop::Limbs link2,
                                      double stiffness,
                                      double weight)
-: robots_(solver.robots()), r1Index_(r1Index), r2Index_(r2Index), link_1_(link1), link_2_(link2), dt_(solver.dt()),
-  task_(solver.robots().mbs(), r1Index, r2Index, stiffness, weight)
+: robots_(solver.robots()), r1Index_(r1Index), r2Index_(r2Index), human1_(human1), human2_(human2), link_1_(link1),
+  link_2_(link2), dt_(solver.dt()), task_(solver.robots().mbs(), r1Index, r2Index, stiffness, weight)
 {
 
   eval_ = this->eval();
@@ -151,27 +153,19 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   const std::string robot_2_link_name = robot_2_pose_links_.getName(link_2_);
   const std::string robot_1_link_name = robot_1_pose_links_.getName(link_1_);
 
-  const std::string robot_2_cvx_name = robot_2_pose_links_.getConvexName(link_2_);
-  const std::string robot_1_cvx_name = robot_1_pose_links_.getConvexName(link_1_);
+  // const std::string robot_2_cvx_name = robot_2_pose_links_.getConvexName(link_2_);
+  // const std::string robot_1_cvx_name = robot_1_pose_links_.getConvexName(link_1_);
 
-  const auto robot_1_cvx = robot_1.convex(robot_1_cvx_name);
-  const auto robot_2_cvx = robot_2.convex(robot_2_cvx_name);
-  auto human_1_cvx = human_1_pose_.getConvex(link_1_);
-  auto human_2_cvx = human_2_pose_.getConvex(link_2_);
+  // sch::Point3 p1, p2;
+  // pair_h1_r2.getClosestPoints(p1, p2);
 
-  sch::CD_Pair pair_h1_r2(&human_1_cvx, robot_2_cvx.second.get());
-  sch::CD_Pair pair_h2_r1(&human_2_cvx, robot_1_cvx.second.get());
+  // human_1_point_ << p1[0], p1[1], p1[2];
+  // robot_2_point_ << p2[0], p2[1], p2[2];
 
-  sch::Point3 p1, p2;
-  pair_h1_r2.getClosestPoints(p1, p2);
+  // pair_h2_r1.getClosestPoints(p1, p2);
 
-  human_1_point_ << p1[0], p1[1], p1[2];
-  robot_2_point_ << p2[0], p2[1], p2[2];
-
-  pair_h2_r1.getClosestPoints(p1, p2);
-
-  human_2_point_ << p1[0], p1[1], p1[2];
-  robot_1_point_ << p2[0], p2[1], p2[2];
+  // human_2_point_ << p1[0], p1[1], p1[2];
+  // robot_1_point_ << p2[0], p2[1], p2[2];
 
   sva::PTransformd X_h1_h1p = sva::PTransformd::Identity();
   sva::PTransformd X_h2_h2p = sva::PTransformd::Identity();
@@ -180,6 +174,11 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
 
   if(main_indx_ == 0)
   {
+    const std::string robot_2_cvx_name = robot_2_pose_links_.getConvexName(link_2_);
+    const auto robot_2_cvx = robot_2.convex(robot_2_cvx_name);
+    auto human_1_cvx = human_1_pose_.getConvex(link_1_, human1_);
+
+    sch::CD_Pair pair_h1_r2(human_1_cvx.get(), robot_2_cvx.second.get());
     getOffset(X_r2_r2p, X_h1_h1p, pair_h1_r2,
               robot_2_pose_links_.getOffset(link_2_) * robot_2.bodyPosW(robot_2_link_name),
               human_1_pose_.getOffset(link_1_) * human_1_pose_.getPose(link_1_));
@@ -188,6 +187,11 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   }
   else
   {
+    const std::string robot_1_cvx_name = robot_1_pose_links_.getConvexName(link_1_);
+    const auto robot_1_cvx = robot_1.convex(robot_1_cvx_name);
+    auto human_2_cvx = human_2_pose_.getConvex(link_2_, human2_);
+
+    sch::CD_Pair pair_h2_r1(human_2_cvx.get(), robot_1_cvx.second.get());
     getOffset(X_r1_r1p, X_h2_h2p, pair_h2_r1,
               robot_1_pose_links_.getOffset(link_1_) * robot_1.bodyPosW(robot_1_link_name),
               human_2_pose_.getOffset(link_2_) * human_2_pose_.getPose(link_2_));
@@ -205,18 +209,11 @@ void biRobotTeleopTask::update(mc_solver::QPSolver &)
   human_2_point_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)).translation();
   robot_1_point_ = (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation();
 
-  // X_h1_h1p = sva::PTransformd::Identity();
-  // X_h2_h2p = sva::PTransformd::Identity();
-  // X_r2_r2p = sva::PTransformd::Identity();
-  // X_r1_r1p = sva::PTransformd::Identity();
-
+  // unused ?
   X_h1_r2_ = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)) * (X_h1_h1p * human_1_pose_.getPose(link_1_)).inv();
   X_r1_h2_ = (X_h2_h2p * human_2_pose_.getPose(link_2_)) * (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).inv();
 
-  eval_.segment(3, 3) = (X_r2_r2p * robot_2.bodyPosW(robot_2_link_name)).translation()
-                        - (X_h1_h1p * human_1_pose_.getPose(link_1_)).translation()
-                        - ((X_h2_h2p * human_2_pose_.getPose(link_2_)).translation()
-                           - (X_r1_r1p * robot_1.bodyPosW(robot_1_link_name)).translation());
+  eval_.segment(3, 3) = robot_2_point_ - human_1_point_ - (human_2_point_ - robot_1_point_);
 
   speed_.segment(3, 3) = getTargetVel(robot_2, robot_2_link_name, X_r2_r2p.translation()).linear()
                          - human_1_pose_.getVel(link_1_, X_h1_h1p).linear()
@@ -367,34 +364,34 @@ void biRobotTeleopTask::resetJointsSelector(mc_solver::QPSolver &) {}
 
 } // namespace mc_tasks
 
-namespace
-{
-
-static auto registered = mc_tasks::MetaTaskLoader::register_load_function(
-    "biRobotTeleop",
-    [](mc_solver::QPSolver & solver, const mc_rtc::Configuration & config)
-    {
-      std::string robot_1_name = solver.robots().robot().name();
-      if(config("robot_1").has("name"))
-      {
-        config("robot_1")("name", robot_1_name);
-      }
-      std::string robot_2_name = "";
-      if(config("robot_2").has("name"))
-      {
-        config("robot_2")("name", robot_2_name);
-      }
-      else
-      {
-        mc_rtc::log::error_and_throw<std::runtime_error>(
-            "[biRobotTeleopTask] robot_2 name shoulde be provided in configuration");
-      }
-
-      const int r1 = solver.robots().robot(robot_1_name).robotIndex();
-      const int r2 = solver.robots().robot(robot_2_name).robotIndex();
-      auto t = std::make_shared<mc_tasks::biRobotTeleopTask>(solver, r1, r2);
-      t->reset();
-      t->load(solver, config);
-      return t;
-    });
-} // namespace
+// namespace
+// {
+//
+// static auto registered = mc_tasks::MetaTaskLoader::register_load_function(
+//     "biRobotTeleop",
+//     [](mc_solver::QPSolver & solver, const mc_rtc::Configuration & config)
+//     {
+//       std::string robot_1_name = solver.robots().robot().name();
+//       if(config("robot_1").has("name"))
+//       {
+//         config("robot_1")("name", robot_1_name);
+//       }
+//       std::string robot_2_name = "";
+//       if(config("robot_2").has("name"))
+//       {
+//         config("robot_2")("name", robot_2_name);
+//       }
+//       else
+//       {
+//         mc_rtc::log::error_and_throw<std::runtime_error>(
+//             "[biRobotTeleopTask] robot_2 name shoulde be provided in configuration");
+//       }
+//
+//       const int r1 = solver.robots().robot(robot_1_name).robotIndex();
+//       const int r2 = solver.robots().robot(robot_2_name).robotIndex();
+//       auto t = std::make_shared<mc_tasks::biRobotTeleopTask>(solver, r1, r2);
+//       t->reset();
+//       t->load(solver, config);
+//       return t;
+//     });
+// } // namespace

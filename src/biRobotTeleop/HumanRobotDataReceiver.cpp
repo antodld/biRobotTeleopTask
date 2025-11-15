@@ -100,6 +100,7 @@ void HumanRobotDataReceiver::robot_msg(const mc_control::ElementId & id, const m
       }
     }
   }
+  std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
   for(auto & subs : subscribed_id_)
   {
     if(subs.second.checkId(id))
@@ -126,6 +127,7 @@ void HumanRobotDataReceiver::checkbox(const mc_control::ElementId & id, bool s)
       }
     }
   }
+  std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
   for(auto & subs : subscribed_id_)
   {
     if(subs.second.checkId(id))
@@ -148,6 +150,7 @@ void HumanRobotDataReceiver::transform(const mc_control::ElementId & id,
       h_thread_.setPose(limb, X);
     }
   }
+  std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
   for(auto & subs : subscribed_id_)
   {
     if(subs.second.checkId(id))
@@ -171,6 +174,7 @@ void HumanRobotDataReceiver::array_input(const mc_control::ElementId & id,
       h_thread_.setVel(limb, sva::MotionVecd(data.segment(0, 6)));
     }
   }
+  std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
   for(auto & subs : subscribed_id_)
   {
     if(subs.second.checkId(id))
@@ -182,6 +186,7 @@ void HumanRobotDataReceiver::array_input(const mc_control::ElementId & id,
 
 void HumanRobotDataReceiver::label(const mc_control::ElementId & id, const std::string & label)
 {
+  std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
   // const mc_control::ElementId id_f(id.category,id.name.substr(0,id.name.find("_transform")))
   for(auto & subs : subscribed_id_)
   {
@@ -197,6 +202,7 @@ void HumanRobotDataReceiver::array_label(const mc_control::ElementId & id,
                                          const Eigen::VectorXd & data)
 {
 
+  std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
   for(auto & subs : subscribed_id_)
   {
     if(subs.second.checkId(id))

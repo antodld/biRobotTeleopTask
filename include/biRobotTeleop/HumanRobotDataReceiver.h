@@ -89,27 +89,37 @@ public:
                    const std::vector<std::string> & category,
                    const std::string & name)
   {
+    std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
     subscribed_id_[sub_name] = SubscridedbId(type, category, name);
   }
 
   void unsubscribe(const std::string & sub_name)
   {
+    std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
     subscribed_id_.erase(sub_name);
   }
 
   template<typename T>
   void getSubscribedData(T & data, const std::string & sub_name) const
   {
+    std::lock_guard<std::mutex> lock(subscribed_data_mutex_);
     if(subscribed_id_.find(sub_name) != subscribed_id_.end())
     {
       if(!checkDataType<T>(subscribed_id_.at(sub_name)))
       {
-        mc_rtc::log::error("Incorrect required data type");
-        return;
+        mc_rtc::log::error_and_throw("[HumanRobotDataReceiver] Incorrect required data type");
       }
       if(subscribed_data_.find(sub_name) != subscribed_data_.end())
       {
-        data = std::any_cast<T>(subscribed_data_.at(sub_name));
+        try
+        {
+          data = std::any_cast<T>(subscribed_data_.at(sub_name));
+        }
+        catch(const std::bad_any_cast & e)
+        {
+          mc_rtc::log::error_and_throw("[HumanRobotDataReceiver] Bad any cast for subscribed data {}: {}", sub_name,
+                                       e.what());
+        }
       }
     }
     else
@@ -320,6 +330,7 @@ private:
 
   std::map<std::string, std::any> subscribed_data_;
   std::map<std::string, SubscridedbId> subscribed_id_;
+  mutable std::mutex subscribed_data_mutex_;
 
   mc_rbdyn::RobotsPtr robots_ = nullptr; // robots instance updated from the GUI thread
   int online_count_ = 1e4;
